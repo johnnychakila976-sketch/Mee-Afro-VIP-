@@ -10,256 +10,74 @@
 
 <style>
 *{box-sizing:border-box;}
-
-body{
-  margin:0;
-  font-family:Arial;
-  background:#041f17;
-  color:white;
-  overflow:hidden;
-}
-
-#app{
-  display:flex;
-  height:100vh;
-  flex-direction:column;
-}
-
-.header{
-  padding:12px;
-  background:rgba(0,0,0,.45);
-  text-align:center;
-  font-weight:bold;
-  border-bottom:1px solid rgba(255,255,255,.08);
-}
-
-#statsBtn{
-  position:absolute;
-  bottom:64px;
-  left:12px;
-  background:#1db954;
-  padding:8px 12px;
-  border-radius:10px;
-  font-weight:bold;
-  z-index:999;
-  box-shadow:0 4px 12px rgba(0,0,0,.25);
-}
-
-#filters{
-  position:absolute;
-  top:10px;
-  left:10px;
-  right:10px;
-  display:flex;
-  gap:12px;
-  flex-wrap:wrap;
-  align-items:center;
-  z-index:999;
-}
-
-#filters button{
-  padding:10px 14px;
-  min-height:44px;
-  border:none;
-  border-radius:10px;
-  background:#0b2b22;
-  color:white;
-  cursor:pointer;
-  font-size:15px;
-}
-
-#filters button.active{
-  background:#1db954;
-}
-
-#searchInput{
-  width:210px;
-  min-height:44px;
-  padding:10px 12px;
-  border:none;
-  border-radius:10px;
-  background:#0b2b22;
-  color:white;
-  outline:none;
-}
-
-.toggle-btn{
-  position:absolute;
-  top:72px;
-  right:12px;
-  z-index:999;
-  min-width:125px;
-  min-height:42px;
-  padding:8px 12px;
-  background:#1db954;
-  border:none;
-  color:white;
-  font-weight:bold;
-  border-radius:10px;
-  cursor:pointer;
-}
-
-/* FORM */
-.form{
-  position:absolute;
-  top:160px;
-  left:10px;
-  right:10px;
-  padding:10px;
-  background:#06251c;
-  display:none;
-  flex-wrap:wrap;
-  gap:8px;
-  border-radius:12px;
-  z-index:1001;
-  box-shadow:0 10px 25px rgba(0,0,0,.35);
-
-  /* animation */
-  opacity:0;
-  transform:translateY(-20px);
-  transition:all .25s ease;
-  pointer-events:none;
-}
-
-.form.show{
-  opacity:1;
-  transform:translateY(0);
-  pointer-events:auto;
-}
-
-.form input{
-  flex:1;
-  min-width:45%;
-  min-height:44px;
-  padding:10px;
-  margin-bottom:6px;
-  background:#0b2b22;
-  border:1px solid rgba(255,255,255,.08);
-  color:white;
-  border-radius:10px;
-  outline:none;
-}
-
-.form button{
-  width:100%;
-  min-height:46px;
-  padding:11px;
-  background:#1db954;
-  border:none;
-  color:white;
-  font-weight:bold;
-  border-radius:10px;
-  cursor:pointer;
-}
-
-.vip-box{
-  display:flex;
-  gap:8px;
-  width:100%;
-}
-
+body{margin:0;font-family:Arial;background:#041f17;color:white;overflow:hidden;}
+#app{display:flex;height:100vh;flex-direction:column;}
+.header{padding:12px;background:rgba(0,0,0,.45);text-align:center;font-weight:bold;border-bottom:1px solid rgba(255,255,255,.08);}
+#statsBtn{position:absolute;bottom:64px;left:12px;background:#1db954;padding:8px 12px;border-radius:10px;font-weight:bold;z-index:999;box-shadow:0 4px 12px rgba(0,0,0,.25);}
+#filters{position:absolute;top:10px;left:10px;right:10px;display:flex;gap:12px;flex-wrap:wrap;align-items:center;z-index:999;}
+#filters button{padding:10px 14px;min-height:44px;border:none;border-radius:10px;background:#0b2b22;color:white;cursor:pointer;font-size:15px;}
+#filters button.active{background:#1db954;}
+#searchInput{width:210px;min-height:44px;padding:10px 12px;border:none;border-radius:10px;background:#0b2b22;color:white;outline:none;}
+.toggle-btn{position:absolute;top:72px;right:12px;z-index:999;min-width:125px;min-height:42px;padding:8px 12px;background:#1db954;border:none;color:white;font-weight:bold;border-radius:10px;cursor:pointer;}
+.form{position:absolute;top:160px;left:10px;right:10px;padding:10px;background:#06251c;display:none;flex-wrap:wrap;gap:8px;border-radius:12px;z-index:1001;box-shadow:0 10px 25px rgba(0,0,0,.35);opacity:0;transform:translateY(-20px);transition:all .25s ease;pointer-events:none;}
+.form.show{opacity:1;transform:translateY(0);pointer-events:auto;}
+.form input{flex:1;min-width:45%;min-height:44px;padding:10px;margin-bottom:6px;background:#0b2b22;border:1px solid rgba(255,255,255,.08);color:white;border-radius:10px;outline:none;}
+.form button{width:100%;min-height:46px;padding:11px;background:#1db954;border:none;color:white;font-weight:bold;border-radius:10px;cursor:pointer;}
+.vip-box{display:flex;gap:8px;width:100%;}
 .vip-box button{flex:1;}
+.vip-active{background:#ffd700 !important;color:black !important;}
+#map{
+  flex:1;
 
-.vip-active{
-  background:#ffd700 !important;
-  color:black !important;
+  /* effet 3D ajouté */
+  transform-style:preserve-3d;
+  transition:transform 0.15s ease;
 }
-
-#map{flex:1;}
-
-.pulse{
-  width:14px;
-  height:14px;
-  border-radius:50%;
-  animation:pulse 1.5s infinite;
-}
-
-@keyframes pulse{
-  0%{transform:scale(1);}
-  70%{transform:scale(1.25);}
-  100%{transform:scale(1);}
-}
-
-.leaflet-popup-content-wrapper,
-.leaflet-popup-tip{
-  background:#0b2b22;
-  color:white;
-}
-
+.pulse{width:14px;height:14px;border-radius:50%;animation:pulse 1.5s infinite;}
+@keyframes pulse{0%{transform:scale(1);}70%{transform:scale(1.25);}100%{transform:scale(1);}}
+.leaflet-popup-content-wrapper,.leaflet-popup-tip{background:#0b2b22;color:white;}
 .leaflet-popup-content{margin:12px;}
-
-.leaflet-popup-content button{
-  border:none;
-  padding:10px 12px;
-  border-radius:8px;
-  cursor:pointer;
-  min-height:42px;
-}
-
+.leaflet-popup-content button{border:none;padding:10px 12px;border-radius:8px;cursor:pointer;min-height:42px;}
 @media(max-width:700px){
-
-  #filters{
-    right:140px;
-    gap:12px;
-  }
-
-  #searchInput{
-    width:100%;
-    flex:1 1 100%;
-  }
-
-  #filters button{
-    flex:1 1 auto;
-    min-width:90px;
-  }
-
-  .toggle-btn{
-    top:12px;
-    right:12px;
-    min-width:115px;
-    font-size:14px;
-  }
-
-  .form{
-    top:150px;
-  }
+#filters{right:140px;gap:12px;}
+#searchInput{width:100%;flex:1 1 100%;}
+#filters button{flex:1 1 auto;min-width:90px;}
+.toggle-btn{top:12px;right:12px;min-width:115px;font-size:14px;}
+.form{top:150px;}
 }
 </style>
 </head>
 
 <body>
-
 <div id="app">
-
 <div id="statsBtn">📊 Clients: 0</div>
 
 <div id="filters">
-  <input id="searchInput" placeholder="🔎 Rechercher un client..." oninput="render()">
-  <button onclick="setFilter('all',this)" class="active">Tout</button>
-  <button onclick="setFilter('done',this)">Complétés</button>
-  <button onclick="setFilter('todo',this)">Non</button>
-  <button onclick="resetAll()">♻ Réinitialiser</button>
-  <button onclick="exportCSV()">📤 Export</button>
+<input id="searchInput" placeholder="🔎 Rechercher un client..." oninput="render()">
+<button onclick="setFilter('all',this)" class="active">Tout</button>
+<button onclick="setFilter('done',this)">Complétés</button>
+<button onclick="setFilter('todo',this)">Non</button>
+<button onclick="resetAll()">♻ Réinitialiser</button>
+<button onclick="exportCSV()">📤 Export</button>
 </div>
 
 <div class="header">📍 Carte Mayotte Mobile PRO</div>
-
 <button class="toggle-btn" onclick="toggleForm()">📋 Formulaire</button>
 
 <div class="form" id="form">
-  <input id="nom" placeholder="Nom">
-  <input id="prenom" placeholder="Prénom">
-  <input id="ville" placeholder="Ville">
-  <input id="numero" placeholder="Numéro">
-  <input id="quartier" placeholder="Quartier">
-  <input id="prix" placeholder="Prix">
+<input id="nom" placeholder="Nom">
+<input id="prenom" placeholder="Prénom">
+<input id="ville" placeholder="Ville">
+<input id="numero" placeholder="Numéro">
+<input id="quartier" placeholder="Quartier">
+<input id="prix" placeholder="Prix">
 
-  <div class="vip-box">
-    <button type="button" id="basicBtn" onclick="setType('BASIC')" class="vip-active">BASIC</button>
-    <button type="button" id="vipBtn" onclick="setType('VIP')">VIP ⭐</button>
-  </div>
+<div class="vip-box">
+<button type="button" id="basicBtn" onclick="setType('BASIC')" class="vip-active">BASIC</button>
+<button type="button" id="vipBtn" onclick="setType('VIP')">VIP ⭐</button>
+</div>
 
-  <button onclick="addClient()">Ajouter client</button>
+<button onclick="addClient()">Ajouter client</button>
 </div>
 
 <div id="map"></div>
@@ -267,11 +85,7 @@ body{
 
 <script>
 const map = L.map('map',{zoomControl:true,preferCanvas:true}).setView([-12.8275,45.1662],10);
-
-L.tileLayer(
-'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-{updateWhenZooming:false,updateInterval:200}
-).addTo(map);
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
 
 let clients = JSON.parse(localStorage.getItem("clients")) || [];
 let markers = {};
@@ -283,195 +97,183 @@ const form = document.getElementById("form");
 const toggleBtn = document.querySelector(".toggle-btn");
 
 function updateStats(){
-  document.getElementById("statsBtn").innerText="📊 Clients: "+clients.length;
+document.getElementById("statsBtn").innerText="📊 Clients: "+clients.length;
 }
 
 function save(){
-  localStorage.setItem("clients",JSON.stringify(clients));
-  updateStats();
+localStorage.setItem("clients",JSON.stringify(clients));
+updateStats();
 }
 
 function toggleForm(){
-  if(form.classList.contains("show")){
-    form.classList.remove("show");
-    setTimeout(()=>form.style.display="none",200);
-  }else{
-    form.style.display="flex";
-    setTimeout(()=>form.classList.add("show"),10);
-  }
-  setTimeout(()=>map.invalidateSize(),300);
+if(form.classList.contains("show")){
+form.classList.remove("show");
+setTimeout(()=>form.style.display="none",200);
+}else{
+form.style.display="flex";
+setTimeout(()=>form.classList.add("show"),10);
+}
+setTimeout(()=>map.invalidateSize(),300);
 }
 
 function closeForm(){
-  form.classList.remove("show");
-  setTimeout(()=>form.style.display="none",200);
+form.classList.remove("show");
+setTimeout(()=>form.style.display="none",200);
 }
 
 function setType(type){
-  clientType=type;
-  basicBtn.classList.remove("vip-active");
-  vipBtn.classList.remove("vip-active");
-
-  if(type==="BASIC") basicBtn.classList.add("vip-active");
-  else vipBtn.classList.add("vip-active");
+clientType=type;
+basicBtn.classList.remove("vip-active");
+vipBtn.classList.remove("vip-active");
+if(type==="BASIC") basicBtn.classList.add("vip-active");
+else vipBtn.classList.add("vip-active");
 }
 
 function createIcon(color){
-  return L.divIcon({
-    className:"",
-    html:`<div class="pulse" style="background:${color}"></div>`,
-    iconSize:[20,20]
-  });
+return L.divIcon({className:"",html:`<div class="pulse" style="background:${color}"></div>`,iconSize:[20,20]});
 }
 
 function setFilter(f,btn){
-  filter=f;
-  document.querySelectorAll("#filters button").forEach(b=>b.classList.remove("active"));
-  if(btn) btn.classList.add("active");
-  render();
+filter=f;
+document.querySelectorAll("#filters button").forEach(b=>b.classList.remove("active"));
+if(btn) btn.classList.add("active");
+render();
 }
 
 function clearMarkers(){
-  Object.values(markers).forEach(m=>map.removeLayer(m));
-  markers={};
+Object.values(markers).forEach(m=>map.removeLayer(m));
+markers={};
 }
 
 function render(){
-  clearMarkers();
-  const search = searchInput.value.trim().toLowerCase();
+clearMarkers();
+const search = searchInput.value.trim().toLowerCase();
 
-  clients.forEach(c=>{
-    if(filter==="done" && !c.completed) return;
-    if(filter==="todo" && c.completed) return;
+clients.forEach(c=>{
+if(filter==="done" && !c.completed) return;
+if(filter==="todo" && c.completed) return;
 
-    const txt=(c.nom+" "+c.prenom+" "+c.ville+" "+(c.quartier||"")).toLowerCase();
-    if(search && !txt.includes(search)) return;
+const txt=(c.nom+" "+c.prenom+" "+c.ville+" "+(c.quartier||"")).toLowerCase();
+if(search && !txt.includes(search)) return;
 
-    const color = c.completed ? "#777" : (c.type==="VIP" ? "#ffd700" : "#00ff88");
+const color = c.completed ? "#777" : (c.type==="VIP" ? "#ffd700" : "#00ff88");
 
-    const marker = L.marker(c.coords,{icon:createIcon(color)}).addTo(map);
-    marker.on("click",()=>openPopupClient(c));
-    markers[c.id]=marker;
-  });
+const marker = L.marker(c.coords,{icon:createIcon(color)}).addTo(map);
+marker.on("click",()=>openPopupClient(c));
+markers[c.id]=marker;
+});
 
-  updateStats();
+updateStats();
 }
 
 function openPopupClient(c){
-  selectedClientId=c.id;
+selectedClientId=c.id;
 
-  const html=`
-    <b>${c.nom} ${c.prenom}</b><br>
-    📍 ${c.ville}<br>
-    🏘 ${c.quartier || "-"}<br>
-    📞 ${c.numero}<br>
-    💰 ${c.prix || "0"}<br>
-    ⭐ ${c.type}<br><br>
+const html=`
+<b>${c.nom} ${c.prenom}</b><br>
+📍 ${c.ville}<br>
+🏘 ${c.quartier || "-"}<br>
+📞 ${c.numero}<br>
+💰 ${c.prix || "0"}<br>
+⭐ ${c.type}<br><br>
+${!c.completed
+? `<button onclick="completeClient('${c.id}')" style="background:#1db954;color:white;">✔ Compléter</button><br><br>`
+: `✅ Terminé<br><br>`
+}
+<button onclick="deleteClient()" style="background:red;color:white;">🗑 Supprimer</button>
+`;
 
-    ${!c.completed
-      ? `<button onclick="completeClient('${c.id}')" style="background:#1db954;color:white;">✔ Compléter</button><br><br>`
-      : `✅ Terminé<br><br>`
-    }
-
-    <button onclick="deleteClient()" style="background:red;color:white;">🗑 Supprimer</button>
-  `;
-
-  markers[c.id].bindPopup(html,{maxWidth:260}).openPopup();
+markers[c.id].bindPopup(html).openPopup();
 }
 
 function completeClient(id){
-  clients = clients.map(c=>{
-    if(c.id===id) c.completed=true;
-    return c;
-  });
-  save();
-  render();
+clients = clients.map(c=>{if(c.id===id) c.completed=true;return c;});
+save();render();
 }
 
 function deleteClient(){
-  clients = clients.filter(c=>c.id!==selectedClientId);
-  save();
-  render();
+clients = clients.filter(c=>c.id!==selectedClientId);
+save();render();
 }
 
 function resetAll(){
-  clients = clients.map(c=>{
-    c.completed=false;
-    return c;
-  });
-  save();
-  render();
+clients = [];
+localStorage.removeItem("clients");
+clearMarkers();
+updateStats();
+render();
 }
 
 function exportCSV(){
-  let csv="Nom,Prénom,Ville,Numéro,Quartier,Prix,Type,Status\n";
-  clients.forEach(c=>{
-    csv += `${c.nom},${c.prenom},${c.ville},${c.numero},${c.quartier},${c.prix},${c.type},${c.completed?"OK":"NON"}\n`;
-  });
-
-  const blob=new Blob([csv],{type:"text/csv"});
-  const url=URL.createObjectURL(blob);
-
-  const a=document.createElement("a");
-  a.href=url;
-  a.download="clients.csv";
-  a.click();
-
-  URL.revokeObjectURL(url);
+let csv="Nom,Prénom,Ville,Numéro,Quartier,Prix,Type,Status\n";
+clients.forEach(c=>{
+csv += `${c.nom},${c.prenom},${c.ville},${c.numero},${c.quartier},${c.prix},${c.type},${c.completed?"OK":"NON"}\n`;
+});
+const blob=new Blob([csv],{type:"text/csv"});
+const url=URL.createObjectURL(blob);
+const a=document.createElement("a");
+a.href=url;a.download="clients.csv";a.click();
+URL.revokeObjectURL(url);
 }
 
 async function getCoords(ville){
-  try{
-    const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(ville+', Mayotte')}`);
-    const d = await res.json();
-    if(d && d[0]){
-      return [parseFloat(d[0].lat),parseFloat(d[0].lon)];
-    }
-  }catch(e){}
-  return [-12.8275,45.1662];
+try{
+const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(ville+', Mayotte')}`);
+const d = await res.json();
+if(d && d[0]) return [parseFloat(d[0].lat),parseFloat(d[0].lon)];
+}catch(e){}
+return [-12.8275,45.1662];
 }
 
 async function addClient(){
-  if(!nom.value.trim()) return;
+if(!nom.value.trim()) return;
 
-  const c={
-    id:Date.now().toString(),
-    nom:nom.value.trim(),
-    prenom:prenom.value.trim(),
-    ville:ville.value.trim(),
-    numero:numero.value.trim(),
-    quartier:quartier.value.trim(),
-    prix:prix.value.trim(),
-    type:clientType,
-    completed:false,
-    coords:await getCoords(ville.value.trim())
-  };
+const c={
+id:Date.now().toString(),
+nom:nom.value.trim(),
+prenom:prenom.value.trim(),
+ville:ville.value.trim(),
+numero:numero.value.trim(),
+quartier:quartier.value.trim(),
+prix:prix.value.trim(),
+type:clientType,
+completed:false,
+coords:await getCoords(ville.value.trim())
+};
 
-  clients.push(c);
-  save();
-  render();
+clients.push(c);
+save();
+render();
 
-  map.flyTo(c.coords,13,{duration:1});
-
-  document.querySelectorAll(".form input").forEach(i=>i.value="");
-
-  closeForm();
+map.flyTo(c.coords,13,{duration:1});
+document.querySelectorAll(".form input").forEach(i=>i.value="");
+closeForm();
 }
 
-document.addEventListener("click",(e)=>{
-  if(
-    form.style.display==="flex" &&
-    !form.contains(e.target) &&
-    !toggleBtn.contains(e.target)
-  ){
-    closeForm();
-  }
+/* ===== Effet 3D ===== */
+document.addEventListener("mousemove",(e)=>{
+  const x = (e.clientX / window.innerWidth - 0.5) * 6;
+  const y = (e.clientY / window.innerHeight - 0.5) * 6;
+  map.getContainer().style.transform = `rotateX(${ -y }deg) rotateY(${ x }deg)`;
+});
+
+document.addEventListener("mouseleave",()=>{
+  map.getContainer().style.transform = "rotateX(0deg) rotateY(0deg)";
+});
+
+document.addEventListener("touchmove",(e)=>{
+  const t = e.touches[0];
+  const x = (t.clientX / window.innerWidth - 0.5) * 6;
+  const y = (t.clientY / window.innerHeight - 0.5) * 6;
+  map.getContainer().style.transform = `rotateX(${ -y }deg) rotateY(${ x }deg)`;
+});
+
+document.addEventListener("touchend",()=>{
+  map.getContainer().style.transform = "rotateX(0deg) rotateY(0deg)";
 });
 
 window.addEventListener("resize",()=>map.invalidateSize());
-
 render();
 </script>
-
 </body>
-</html>
+  </html>
