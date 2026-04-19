@@ -33,7 +33,6 @@ body{
   border-bottom:1px solid rgba(255,255,255,.08);
 }
 
-/* STAT déplacé au-dessus */
 #statsBtn{
   position:absolute;
   bottom:64px;
@@ -46,14 +45,13 @@ body{
   box-shadow:0 4px 12px rgba(0,0,0,.25);
 }
 
-/* BARRE TOP */
 #filters{
   position:absolute;
   top:10px;
   left:10px;
   right:10px;
   display:flex;
-  gap:10px;
+  gap:12px;
   flex-wrap:wrap;
   align-items:center;
   z-index:999;
@@ -85,7 +83,6 @@ body{
   outline:none;
 }
 
-/* BOUTON FORMULAIRE */
 .toggle-btn{
   position:absolute;
   top:72px;
@@ -105,7 +102,7 @@ body{
 /* FORM */
 .form{
   position:absolute;
-  top:122px;
+  top:160px;
   left:10px;
   right:10px;
   padding:10px;
@@ -114,8 +111,20 @@ body{
   flex-wrap:wrap;
   gap:8px;
   border-radius:12px;
-  z-index:998;
+  z-index:1001;
   box-shadow:0 10px 25px rgba(0,0,0,.35);
+
+  /* animation */
+  opacity:0;
+  transform:translateY(-20px);
+  transition:all .25s ease;
+  pointer-events:none;
+}
+
+.form.show{
+  opacity:1;
+  transform:translateY(0);
+  pointer-events:auto;
 }
 
 .form input{
@@ -123,6 +132,7 @@ body{
   min-width:45%;
   min-height:44px;
   padding:10px;
+  margin-bottom:6px;
   background:#0b2b22;
   border:1px solid rgba(255,255,255,.08);
   color:white;
@@ -190,7 +200,7 @@ body{
 
   #filters{
     right:140px;
-    gap:8px;
+    gap:12px;
   }
 
   #searchInput{
@@ -211,7 +221,7 @@ body{
   }
 
   .form{
-    top:120px;
+    top:150px;
   }
 }
 </style>
@@ -282,12 +292,19 @@ function save(){
 }
 
 function toggleForm(){
-  form.style.display = form.style.display==="flex" ? "none" : "flex";
-  setTimeout(()=>map.invalidateSize(),200);
+  if(form.classList.contains("show")){
+    form.classList.remove("show");
+    setTimeout(()=>form.style.display="none",200);
+  }else{
+    form.style.display="flex";
+    setTimeout(()=>form.classList.add("show"),10);
+  }
+  setTimeout(()=>map.invalidateSize(),300);
 }
 
 function closeForm(){
-  form.style.display="none";
+  form.classList.remove("show");
+  setTimeout(()=>form.style.display="none",200);
 }
 
 function setType(type){
@@ -320,26 +337,20 @@ function clearMarkers(){
 }
 
 function render(){
-
   clearMarkers();
-
   const search = searchInput.value.trim().toLowerCase();
 
   clients.forEach(c=>{
-
     if(filter==="done" && !c.completed) return;
     if(filter==="todo" && c.completed) return;
 
     const txt=(c.nom+" "+c.prenom+" "+c.ville+" "+(c.quartier||"")).toLowerCase();
-
     if(search && !txt.includes(search)) return;
 
     const color = c.completed ? "#777" : (c.type==="VIP" ? "#ffd700" : "#00ff88");
 
     const marker = L.marker(c.coords,{icon:createIcon(color)}).addTo(map);
-
     marker.on("click",()=>openPopupClient(c));
-
     markers[c.id]=marker;
   });
 
@@ -347,7 +358,6 @@ function render(){
 }
 
 function openPopupClient(c){
-
   selectedClientId=c.id;
 
   const html=`
@@ -374,7 +384,6 @@ function completeClient(id){
     if(c.id===id) c.completed=true;
     return c;
   });
-
   save();
   render();
 }
@@ -390,15 +399,12 @@ function resetAll(){
     c.completed=false;
     return c;
   });
-
   save();
   render();
 }
 
 function exportCSV(){
-
   let csv="Nom,Prénom,Ville,Numéro,Quartier,Prix,Type,Status\n";
-
   clients.forEach(c=>{
     csv += `${c.nom},${c.prenom},${c.ville},${c.numero},${c.quartier},${c.prix},${c.type},${c.completed?"OK":"NON"}\n`;
   });
@@ -415,21 +421,17 @@ function exportCSV(){
 }
 
 async function getCoords(ville){
-
   try{
     const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(ville+', Mayotte')}`);
     const d = await res.json();
-
     if(d && d[0]){
       return [parseFloat(d[0].lat),parseFloat(d[0].lon)];
     }
   }catch(e){}
-
   return [-12.8275,45.1662];
 }
 
 async function addClient(){
-
   if(!nom.value.trim()) return;
 
   const c={
@@ -446,7 +448,6 @@ async function addClient(){
   };
 
   clients.push(c);
-
   save();
   render();
 
@@ -457,7 +458,6 @@ async function addClient(){
   closeForm();
 }
 
-/* fermer formulaire si clic dehors */
 document.addEventListener("click",(e)=>{
   if(
     form.style.display==="flex" &&
