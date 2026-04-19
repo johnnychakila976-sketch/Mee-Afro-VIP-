@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Carte Mayotte Mobile PRO</title>
+<title>Carte Mayotte Mobile</title>
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.css">
@@ -13,15 +13,64 @@
 <script src="https://unpkg.com/leaflet.markercluster/dist/leaflet.markercluster.js"></script>
 
 <style>
-*{box-sizing:border-box;}
 body{margin:0;font-family:Arial;background:#041f17;color:white;overflow:hidden;}
 #map{height:100vh;width:100%;}
-.pulse{width:14px;height:14px;border-radius:50%;animation:pulse 1.5s infinite;}
-@keyframes pulse{0%{transform:scale(1);}70%{transform:scale(1.3);}100%{transform:scale(1);}}
+
+.panel{
+position:absolute;
+top:10px;
+left:10px;
+right:10px;
+z-index:9999;
+display:flex;
+flex-wrap:wrap;
+gap:8px;
+}
+
+.panel input{
+padding:10px;
+border:none;
+border-radius:8px;
+background:#0b2b22;
+color:white;
+flex:1;
+min-width:120px;
+}
+
+.panel button{
+padding:10px;
+border:none;
+border-radius:8px;
+background:#1db954;
+color:white;
+cursor:pointer;
+}
+
+.pulse{
+width:14px;
+height:14px;
+border-radius:50%;
+animation:pulse 1.5s infinite;
+}
+
+@keyframes pulse{
+0%{transform:scale(1);}
+70%{transform:scale(1.3);}
+100%{transform:scale(1);}
+}
 </style>
 </head>
 
 <body>
+
+<div class="panel">
+<input id="nom" placeholder="Nom">
+<input id="prenom" placeholder="Prénom">
+<input id="ville" placeholder="Village (ex: Acoua)">
+<input id="numero" placeholder="Numéro">
+<input id="prix" placeholder="Prix">
+<button onclick="addClient()">Ajouter</button>
+</div>
 
 <div id="map"></div>
 
@@ -33,86 +82,52 @@ const map = L.map('map').setView([-12.8275,45.1662],10);
 L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png')
 .addTo(map);
 
-/* ================= BASE VILLAGES MAYOTTE ================= */
+/* ================= BASE VILLAGES ================= */
 const villagesBase = {
-"acoua": [-12.7236, 45.0419],
-"bandraboua": [-12.6956, 45.1383],
-"boueni": [-12.9231, 45.0785],
-"chiconi": [-12.8322, 45.1064],
-"dembeni": [-12.8456, 45.1942],
-"kani-keli": [-12.9524, 45.1053],
-"koungou": [-12.7356, 45.2041],
-"mamoudzou": [-12.7806, 45.2278],
-"m'tsangamouji": [-12.6862, 45.0831],
-"ouangani": [-12.8379, 45.1389],
-"pamandzi": [-12.7961, 45.2819],
-"chirongui": [-12.9312, 45.1506],
-"sada": [-12.8533, 45.1021],
-"tsingoni": [-12.8271, 45.1069],
-"bouyouni": [-12.7289, 45.1532]
+"acoua":[-12.7236,45.0419],
+"mamoudzou":[-12.7806,45.2278],
+"dembeni":[-12.8456,45.1942],
+"koungou":[-12.7356,45.2041],
+"chiconi":[-12.8322,45.1064],
+"sada":[-12.8533,45.1021]
 };
 
-/* ================= CACHE ================= */
-let villagesCache = JSON.parse(localStorage.getItem("villagesCache")) || {};
-
-/* ================= CLIENTS ================= */
+/* ================= DATA ================= */
 let clients = JSON.parse(localStorage.getItem("clients")) || [];
 
-/* ================= CLUSTER ================= */
 let clusterGroup = L.markerClusterGroup({
-spiderfyOnMaxZoom:true,
-zoomToBoundsOnClick:true
+spiderfyOnMaxZoom:true
 });
 map.addLayer(clusterGroup);
 
-/* ================= GEOLOCALISATION ================= */
+/* ================= GEO ================= */
 async function getCoords(ville){
 
 if(!ville) return [-12.8275,45.1662];
 
-let key = ville.toLowerCase().trim();
+let key = ville.toLowerCase();
 
-/* 1. base locale */
 if(villagesBase[key]){
 return villagesBase[key];
 }
 
-/* 2. cache */
-if(villagesCache[key]){
-return villagesCache[key];
-}
-
-/* 3. API fallback */
 try{
-const res = await fetch(
-`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(ville + ", Mayotte")}`
-);
-
+const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(ville + ", Mayotte")}`);
 const data = await res.json();
 
-if(data && data[0]){
-const coords = [
-parseFloat(data[0].lat),
-parseFloat(data[0].lon)
-];
-
-/* sauvegarde cache */
-villagesCache[key] = coords;
-localStorage.setItem("villagesCache",JSON.stringify(villagesCache));
-
-return coords;
+if(data[0]){
+return [parseFloat(data[0].lat), parseFloat(data[0].lon)];
 }
 
 }catch(e){}
 
-/* fallback */
 return [-12.8275,45.1662];
 }
 
-/* ================= ADD CLIENT ================= */
+/* ================= ADD ================= */
 async function addClient(){
 
-const coords = await getCoords(ville.value.trim());
+const coords = await getCoords(ville.value);
 
 const c={
 id:Date.now().toString(),
@@ -120,11 +135,9 @@ nom:nom.value,
 prenom:prenom.value,
 ville:ville.value,
 numero:numero.value,
-quartier:quartier.value,
 prix:prix.value,
 coords:coords,
-completed:false,
-type:"BASIC"
+completed:false
 };
 
 clients.push(c);
@@ -132,9 +145,16 @@ localStorage.setItem("clients",JSON.stringify(clients));
 
 render();
 
-map.flyTo(coords,15,{duration:0.8});
+map.flyTo(coords,14);
 
-nom.value=prenom.value=ville.value=numero.value=quartier.value=prix.value="";
+nom.value=prenom.value=ville.value=numero.value=prix.value="";
+}
+
+/* ================= DELETE ================= */
+function deleteClient(id){
+clients=clients.filter(c=>c.id!==id);
+localStorage.setItem("clients",JSON.stringify(clients));
+render();
 }
 
 /* ================= COMPLETE ================= */
@@ -143,13 +163,6 @@ clients=clients.map(c=>{
 if(c.id===id) c.completed=true;
 return c;
 });
-localStorage.setItem("clients",JSON.stringify(clients));
-render();
-}
-
-/* ================= DELETE ================= */
-function deleteClient(id){
-clients=clients.filter(c=>c.id!==id);
 localStorage.setItem("clients",JSON.stringify(clients));
 render();
 }
@@ -166,8 +179,7 @@ const color=c.completed?"#777":"#00ff88";
 const marker=L.marker(c.coords,{
 icon:L.divIcon({
 className:"",
-html:`<div class="pulse" style="background:${color}"></div>`,
-iconSize:[14,14]
+html:`<div class="pulse" style="background:${color}"></div>`
 })
 });
 
@@ -178,26 +190,17 @@ marker.bindPopup(`
 💰 ${c.prix}<br><br>
 
 ${!c.completed ?
-`<button onclick="completeClient('${c.id}')" style="background:#1db954;color:white;width:100%;padding:8px;border:none;margin-bottom:5px;">
-✔ Valider
-</button>`:"✔ OK<br><br>"}
+`<button onclick="completeClient('${c.id}')">✔ Valider</button>`:"✔ OK<br><br>"}
 
-<button onclick="deleteClient('${c.id}')" style="background:red;color:white;width:100%;padding:8px;border:none;">
-🗑 Supprimer
-</button>
+<button onclick="deleteClient('${c.id}')">🗑 Supprimer</button>
 `);
 
-marker.on("click",()=>{
-map.flyTo(c.coords,15,{duration:0.6});
-marker.openPopup();
-});
-
 clusterGroup.addLayer(marker);
+
 });
 
 }
 
-/* ================= INIT ================= */
 render();
 
 </script>
