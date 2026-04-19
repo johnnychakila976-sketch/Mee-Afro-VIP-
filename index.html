@@ -19,9 +19,9 @@ body{margin:0;font-family:Arial;background:#041f17;color:white;overflow:hidden;}
 #filters button.active{background:#1db954;}
 #searchInput{width:210px;min-height:44px;padding:10px 12px;border:none;border-radius:10px;background:#0b2b22;color:white;outline:none;}
 .toggle-btn{position:absolute;top:72px;right:12px;z-index:999;min-width:125px;min-height:42px;padding:8px 12px;background:#1db954;border:none;color:white;font-weight:bold;border-radius:10px;cursor:pointer;}
-.form{position:absolute;top:160px;left:10px;right:10px;padding:10px;background:#06251c;display:none;flex-wrap:wrap;gap:8px;border-radius:12px;z-index:1001;box-shadow:0 10px 25px rgba(0,0,0,.35);opacity:0;transform:translateY(-20px);transition:all .25s ease;pointer-events:none;}
-.form.show{opacity:1;transform:translateY(0);pointer-events:auto;}
-.form input{flex:1;min-width:45%;min-height:44px;padding:10px;margin-bottom:6px;background:#0b2b22;border:1px solid rgba(255,255,255,.08);color:white;border-radius:10px;outline:none;}
+.form{position:absolute;top:160px;left:10px;right:10px;padding:10px;background:#06251c;display:none;flex-wrap:wrap;gap:8px;border-radius:12px;z-index:1001;}
+.form.show{display:flex;}
+.form input{flex:1;min-width:45%;min-height:44px;padding:10px;background:#0b2b22;border:1px solid rgba(255,255,255,.08);color:white;border-radius:10px;}
 .form button{width:100%;min-height:46px;padding:11px;background:#1db954;border:none;color:white;font-weight:bold;border-radius:10px;cursor:pointer;}
 .vip-box{display:flex;gap:8px;width:100%;}
 .vip-box button{flex:1;}
@@ -29,26 +29,20 @@ body{margin:0;font-family:Arial;background:#041f17;color:white;overflow:hidden;}
 #map{flex:1;}
 .pulse{width:14px;height:14px;border-radius:50%;animation:pulse 1.5s infinite;}
 @keyframes pulse{0%{transform:scale(1);}70%{transform:scale(1.25);}100%{transform:scale(1);}}
-.leaflet-popup-content-wrapper,.leaflet-popup-tip{background:#0b2b22;color:white;}
-.leaflet-popup-content{margin:12px;}
-.leaflet-popup-content button{border:none;padding:10px 12px;border-radius:8px;cursor:pointer;min-height:42px;}
-
-.vip-blink{
-  box-shadow: 0 0 12px #ffd700, 0 0 20px #ffd700;
-}
 </style>
 </head>
 
 <body>
 <div id="app">
+
 <div id="statsBtn">📊 Clients: 0</div>
 
 <div id="filters">
-<input id="searchInput" placeholder="🔎 Rechercher un client..." oninput="render()">
+<input id="searchInput" placeholder="🔎 Rechercher..." oninput="debouncedRender()">
 <button onclick="setFilter('all',this)" class="active">Tout</button>
 <button onclick="setFilter('done',this)">Complétés</button>
 <button onclick="setFilter('todo',this)">Non</button>
-<button onclick="resetAll()">♻ Réinitialiser</button>
+<button onclick="resetAll()">♻ Reset</button>
 <button onclick="exportCSV()">📤 Export</button>
 </div>
 
@@ -64,8 +58,8 @@ body{margin:0;font-family:Arial;background:#041f17;color:white;overflow:hidden;}
 <input id="prix" placeholder="Prix">
 
 <div class="vip-box">
-<button type="button" id="basicBtn" onclick="setType('BASIC')" class="vip-active">BASIC</button>
-<button type="button" id="vipBtn" onclick="setType('VIP')">VIP ⭐</button>
+<button id="basicBtn" onclick="setType('BASIC')" class="vip-active">BASIC</button>
+<button id="vipBtn" onclick="setType('VIP')">VIP ⭐</button>
 </div>
 
 <button onclick="addClient()">Ajouter client</button>
@@ -83,38 +77,42 @@ let markers = {};
 let filter = "all";
 let clientType = "BASIC";
 
-/* =========================
-   SAFE LOAD
-========================= */
-window.addEventListener("load",()=>render());
+let rendering = false;
+let renderTimeout = null;
 
-const searchInput = document.getElementById("searchInput");
+/* =========================
+   DOM SAFE
+========================= */
+const nomEl = document.getElementById("nom");
+const prenomEl = document.getElementById("prenom");
+const villeEl = document.getElementById("ville");
+const numeroEl = document.getElementById("numero");
+const quartierEl = document.getElementById("quartier");
+const prixEl = document.getElementById("prix");
+
+/* =========================
+   INIT
+========================= */
+window.addEventListener("load", ()=>render());
+
+/* =========================
+   DEBOUNCE
+========================= */
+function debouncedRender(){
+clearTimeout(renderTimeout);
+renderTimeout = setTimeout(render,80);
+}
 
 /* =========================
    FORM
 ========================= */
 function toggleForm(){
-const form = document.getElementById("form");
-
-if(form.classList.contains("show")){
-  form.classList.remove("show");
-  setTimeout(()=>form.style.display="none",200);
-}else{
-  form.style.display="flex";
-  setTimeout(()=>form.classList.add("show"),10);
-}
-
-setTimeout(()=>map.invalidateSize(),300);
-}
-
-function closeForm(){
-const form = document.getElementById("form");
-form.classList.remove("show");
-setTimeout(()=>form.style.display="none",200);
+document.getElementById("form").classList.toggle("show");
+setTimeout(()=>map.invalidateSize(),200);
 }
 
 /* =========================
-   TYPE
+   TYPE CLIENT (FIXED)
 ========================= */
 function setType(type){
 clientType = type;
@@ -122,38 +120,28 @@ clientType = type;
 document.getElementById("basicBtn").classList.remove("vip-active");
 document.getElementById("vipBtn").classList.remove("vip-active");
 
-if(type === "BASIC"){
-document.getElementById("basicBtn").classList.add("vip-active");
-}else{
-document.getElementById("vipBtn").classList.add("vip-active");
-}
+if(type==="BASIC") document.getElementById("basicBtn").classList.add("vip-active");
+else document.getElementById("vipBtn").classList.add("vip-active");
 }
 
 /* =========================
-   ADD CLIENT (FIX FINAL)
+   ADD CLIENT SAFE
 ========================= */
 function addClient(){
 
-const nom = document.getElementById("nom");
-const prenom = document.getElementById("prenom");
-const ville = document.getElementById("ville");
-const numero = document.getElementById("numero");
-const quartier = document.getElementById("quartier");
-const prix = document.getElementById("prix");
+if(!nomEl.value.trim()) return;
 
-if(!nom.value.trim()) return;
-
-const c = {
-id: Date.now().toString(),
-nom: nom.value.trim(),
-prenom: prenom.value.trim(),
-ville: ville.value.trim(),
-numero: numero.value.trim(),
-quartier: quartier.value.trim(),
-prix: prix.value.trim(),
-type: clientType || "BASIC",
-completed: false,
-coords: [-12.8275,45.1662]
+const c={
+id:Date.now().toString(),
+nom:nomEl.value.trim(),
+prenom:prenomEl.value.trim(),
+ville:villeEl.value.trim(),
+numero:numeroEl.value.trim(),
+quartier:quartierEl.value.trim(),
+prix:prixEl.value.trim(),
+type:clientType,
+completed:false,
+coords:[-12.8275,45.1662]
 };
 
 clients.push(c);
@@ -161,15 +149,12 @@ localStorage.setItem("clients",JSON.stringify(clients));
 
 render();
 
-/* reset */
-nom.value="";
-prenom.value="";
-ville.value="";
-numero.value="";
-quartier.value="";
-prix.value="";
-
-closeForm();
+nomEl.value="";
+prenomEl.value="";
+villeEl.value="";
+numeroEl.value="";
+quartierEl.value="";
+prixEl.value="";
 }
 
 /* =========================
@@ -189,7 +174,7 @@ function exportCSV(){
 let csv="Nom,Prénom,Ville,Numéro,Quartier,Prix,Type,Status\n";
 
 clients.forEach(c=>{
-csv += `${c.nom||""},${c.prenom||""},${c.ville||""},${c.numero||""},${c.quartier||""},${c.prix||""},${c.type||""},${c.completed?"OK":"NON"}\n`;
+csv+=`${c.nom||""},${c.prenom||""},${c.ville||""},${c.numero||""},${c.quartier||""},${c.prix||""},${c.type||""},${c.completed?"OK":"NON"}\n`;
 });
 
 const blob=new Blob([csv],{type:"text/csv"});
@@ -198,10 +183,7 @@ const url=URL.createObjectURL(blob);
 const a=document.createElement("a");
 a.href=url;
 a.download="clients.csv";
-document.body.appendChild(a);
 a.click();
-a.remove();
-
 URL.revokeObjectURL(url);
 }
 
@@ -210,13 +192,7 @@ URL.revokeObjectURL(url);
 ========================= */
 function setFilter(f,btn){
 filter=f;
-
-document.querySelectorAll("#filters button").forEach(b=>{
-if(b.innerText.includes("Tout")||b.innerText.includes("Compl")||b.innerText.includes("Non")){
-b.classList.remove("active");
-}
-});
-
+document.querySelectorAll("#filters button").forEach(b=>b.classList.remove("active"));
 if(btn) btn.classList.add("active");
 render();
 }
@@ -224,24 +200,28 @@ render();
 /* =========================
    ICON
 ========================= */
-function createIcon(color,type){
+function icon(color){
 return L.divIcon({
 className:"",
-html:`<div class="pulse ${type==='VIP'?'vip-blink':''}" style="background:${color}"></div>`,
+html:`<div class="pulse" style="background:${color}"></div>`,
 iconSize:[14,14]
 });
 }
 
 /* =========================
-   OFFSET
+   OFFSET FIX FINAL
 ========================= */
 function offsetCoords(coords,index,total){
-const zoom=map.getZoom();
-const base=0.0002;
-const scale=Math.pow(2,(14-zoom));
 
-const radius=(base*scale*4)+(total*base*scale*2);
-const angle=(index/total)*(2*Math.PI);
+if(!coords || !Array.isArray(coords)) return [-12.8275,45.1662];
+if(total<=1) return coords;
+
+const zoom = map.getZoom();
+const base = 0.0003;
+const scale = Math.pow(2,(14-zoom));
+
+const radius = (base*scale*3)+(total*base*scale);
+const angle = index/total*(2*Math.PI);
 
 return [
 coords[0]+Math.cos(angle)*radius,
@@ -250,16 +230,30 @@ coords[1]+Math.sin(angle)*radius
 }
 
 /* =========================
-   RENDER SAFE
+   CLEAR MARKERS SAFE
+========================= */
+function clearMarkers(){
+for(let id in markers){
+try{ map.removeLayer(markers[id]); }catch(e){}
+}
+markers={};
+}
+
+/* =========================
+   RENDER FINAL STABLE
 ========================= */
 function render(){
 
-Object.values(markers).forEach(m=>map.removeLayer(m));
-markers={};
+if(rendering) return;
+rendering = true;
 
-const search=(searchInput?.value||"").toLowerCase();
+clearMarkers();
+
+const search=(document.getElementById("searchInput")?.value||"").toLowerCase();
 
 clients.forEach(c=>{
+
+if(!c.coords || !Array.isArray(c.coords)) return;
 
 if(filter==="done" && !c.completed) return;
 if(filter==="todo" && c.completed) return;
@@ -269,13 +263,18 @@ if(search && !txt.includes(search)) return;
 
 const color=c.completed?"#777":(c.type==="VIP"?"#ffd700":"#00ff88");
 
-const same=clients.filter(x=>x.coords);
+const same=clients.filter(x =>
+x.coords &&
+Math.abs(x.coords[0]-c.coords[0])<0.000001 &&
+Math.abs(x.coords[1]-c.coords[1])<0.000001
+);
+
 const index=same.findIndex(x=>x.id===c.id);
 
 const newCoords=offsetCoords(c.coords,index,same.length);
 
 const marker=L.marker(newCoords,{
-icon:createIcon(color,c.type)
+icon:icon(color)
 }).addTo(map);
 
 markers[c.id]=marker;
@@ -283,9 +282,12 @@ markers[c.id]=marker;
 });
 
 document.getElementById("statsBtn").innerText="📊 Clients: "+clients.length;
+
+rendering=false;
 }
 
 render();
 </script>
+
 </body>
 </html>
