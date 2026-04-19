@@ -6,7 +6,6 @@
 <title>Carte Mayotte Mobile</title>
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
-
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.css">
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.Default.css">
 
@@ -19,18 +18,6 @@ body{margin:0;font-family:Arial;background:#041f17;color:white;overflow:hidden;}
 #app{display:flex;height:100vh;flex-direction:column;}
 .header{padding:12px;background:rgba(0,0,0,.45);text-align:center;font-weight:bold;}
 #statsBtn{position:absolute;bottom:64px;left:12px;background:#1db954;padding:8px 12px;border-radius:10px;font-weight:bold;z-index:999;}
-#filters{position:absolute;top:10px;left:10px;right:10px;display:flex;gap:12px;flex-wrap:wrap;z-index:999;}
-#filters button{padding:10px 14px;border:none;border-radius:10px;background:#0b2b22;color:white;cursor:pointer;}
-#filters button.active{background:#1db954;}
-#searchInput{width:210px;padding:10px;border:none;border-radius:10px;background:#0b2b22;color:white;}
-.toggle-btn{position:absolute;top:72px;right:12px;z-index:999;padding:8px 12px;background:#1db954;border:none;color:white;font-weight:bold;border-radius:10px;cursor:pointer;}
-.form{position:absolute;top:160px;left:10px;right:10px;padding:10px;background:#06251c;display:none;flex-wrap:wrap;gap:8px;border-radius:12px;z-index:1001;}
-.form.show{display:flex;}
-.form input{flex:1;min-width:45%;padding:10px;background:#0b2b22;border:none;color:white;border-radius:10px;}
-.form button{width:100%;padding:11px;background:#1db954;border:none;color:white;font-weight:bold;border-radius:10px;cursor:pointer;}
-.vip-box{display:flex;gap:8px;width:100%;}
-.vip-box button{flex:1;}
-.vip-active{background:#ffd700 !important;color:black !important;}
 #map{flex:1;}
 .pulse{width:14px;height:14px;border-radius:50%;animation:pulse 1.5s infinite;}
 @keyframes pulse{0%{transform:scale(1);}70%{transform:scale(1.25);}100%{transform:scale(1);}}
@@ -38,197 +25,25 @@ body{margin:0;font-family:Arial;background:#041f17;color:white;overflow:hidden;}
 </head>
 
 <body>
+
 <div id="app">
-
-<div id="statsBtn">📊 Clients: 0</div>
-
-<div id="filters">
-<input id="searchInput" placeholder="🔎 Rechercher..." oninput="render()">
-<button onclick="setFilter('all',this)" class="active">Tout</button>
-<button onclick="setFilter('done',this)">Complétés</button>
-<button onclick="setFilter('todo',this)">Non</button>
-<button onclick="resetAll()">♻ Reset</button>
-<button onclick="exportCSV()">📤 Export</button>
-</div>
-
-<div class="header">📍 Carte Mayotte Mobile PRO</div>
-<button class="toggle-btn" onclick="toggleForm()">📋 Formulaire</button>
-
-<div class="form" id="form">
-<input id="nom" placeholder="Nom">
-<input id="prenom" placeholder="Prénom">
-<input id="ville" placeholder="Ville">
-<input id="numero" placeholder="Numéro">
-<input id="quartier" placeholder="Quartier">
-<input id="prix" placeholder="Prix">
-
-<div class="vip-box">
-<button id="basicBtn" onclick="setType('BASIC')" class="vip-active">BASIC</button>
-<button id="vipBtn" onclick="setType('VIP')">VIP ⭐</button>
-</div>
-
-<button onclick="addClient()">Ajouter client</button>
-</div>
-
+<div id="statsBtn">📊 Clients</div>
+<div class="header">📍 Carte Mayotte</div>
 <div id="map"></div>
 </div>
 
 <script>
+
 const map = L.map('map').setView([-12.8275,45.1662],10);
 
 L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
 
 /* =========================
-   VILLAGES MAYOTTE
-========================= */
-const villages = [
-{ nom:"Mamoudzou", coords:[-12.7808,45.2278] },
-{ nom:"Koungou", coords:[-12.7333,45.2167] },
-{ nom:"Dzaoudzi", coords:[-12.7833,45.2833] },
-{ nom:"Pamandzi", coords:[-12.7897,45.2797] },
-{ nom:"Dembeni", coords:[-12.8375,45.1842] },
-{ nom:"Sada", coords:[-12.8500,45.1020] },
-{ nom:"Chiconi", coords:[-12.8320,45.1060] },
-{ nom:"Tsingoni", coords:[-12.7850,45.1230] },
-{ nom:"Acoua", coords:[-12.7220,45.0580] },
-{ nom:"Bandraboua", coords:[-12.7020,45.1200] }
-];
-
-/* =========================
    DATA
 ========================= */
 let clients = JSON.parse(localStorage.getItem("clients")) || [];
-let filter = "all";
-let clientType = "BASIC";
-
-/* =========================
-   CLUSTER
-========================= */
 let clusterGroup = L.markerClusterGroup();
 map.addLayer(clusterGroup);
-
-/* =========================
-   NORMALISATION
-========================= */
-function normalize(str){
-return str
-.toLowerCase()
-.normalize("NFD")
-.replace(/[\u0300-\u036f]/g,"")
-.trim();
-}
-
-/* =========================
-   VILLAGE MATCH EXACT
-========================= */
-function getCoords(ville){
-
-if(!ville) return [-12.8275,45.1662];
-
-const input = normalize(ville);
-
-let found = villages.find(v=>{
-const vname = normalize(v.nom);
-return vname === input || vname.includes(input) || input.includes(vname);
-});
-
-return found ? found.coords : [-12.8275,45.1662];
-}
-
-/* =========================
-   FORM
-========================= */
-function toggleForm(){
-document.getElementById("form").classList.toggle("show");
-setTimeout(()=>map.invalidateSize(),200);
-}
-
-/* =========================
-   TYPE
-========================= */
-function setType(type){
-clientType=type;
-
-basicBtn.classList.remove("vip-active");
-vipBtn.classList.remove("vip-active");
-
-if(type==="BASIC") basicBtn.classList.add("vip-active");
-else vipBtn.classList.add("vip-active");
-}
-
-/* =========================
-   ADD CLIENT
-========================= */
-function addClient(){
-
-if(!nom.value.trim()) return;
-
-const coords = getCoords(ville.value.trim());
-
-const c={
-id:Date.now().toString(),
-nom:nom.value.trim(),
-prenom:prenom.value.trim(),
-ville:ville.value.trim(),
-numero:numero.value.trim(),
-quartier:quartier.value.trim(),
-prix:prix.value.trim(),
-type:clientType,
-completed:false,
-coords:coords
-};
-
-clients.push(c);
-localStorage.setItem("clients",JSON.stringify(clients));
-
-render();
-
-/* 🎯 zoom + popup */
-setTimeout(()=>{
-map.flyTo(c.coords,15,{duration:0.8});
-},200);
-
-nom.value=prenom.value=ville.value=numero.value=quartier.value=prix.value="";
-}
-
-/* =========================
-   RESET
-========================= */
-function resetAll(){
-clients=[];
-localStorage.removeItem("clients");
-render();
-}
-
-/* =========================
-   EXPORT
-========================= */
-function exportCSV(){
-let csv="Nom,Prénom,Ville,Numéro,Quartier,Prix,Type,Status\n";
-
-clients.forEach(c=>{
-csv+=`${c.nom},${c.prenom},${c.ville},${c.numero},${c.quartier},${c.prix},${c.type},${c.completed?"OK":"NON"}\n`;
-});
-
-const blob=new Blob([csv],{type:"text/csv"});
-const url=URL.createObjectURL(blob);
-
-const a=document.createElement("a");
-a.href=url;
-a.download="clients.csv";
-a.click();
-URL.revokeObjectURL(url);
-}
-
-/* =========================
-   FILTER
-========================= */
-function setFilter(f,btn){
-filter=f;
-document.querySelectorAll("#filters button").forEach(b=>b.classList.remove("active"));
-if(btn) btn.classList.add("active");
-render();
-}
 
 /* =========================
    RENDER
@@ -239,9 +54,9 @@ clusterGroup.clearLayers();
 
 clients.forEach(c=>{
 
-const color=c.completed?"#777":(c.type==="VIP"?"#ffd700":"#00ff88");
+const color = c.completed ? "#777" : (c.type==="VIP" ? "#ffd700" : "#00ff88");
 
-const marker=L.marker(c.coords,{
+const marker = L.marker(c.coords,{
 icon:L.divIcon({
 className:"",
 html:`<div class="pulse" style="background:${color}"></div>`,
@@ -249,15 +64,36 @@ iconSize:[14,14]
 })
 });
 
+/* =========================
+   POPUP FIX COMPLET
+========================= */
 marker.bindPopup(`
+<div style="min-width:180px">
 <b>${c.nom} ${c.prenom}</b><br>
 📍 ${c.ville}<br>
 🏘 ${c.quartier||"-"}<br>
 📞 ${c.numero||"-"}<br>
 💰 ${c.prix||"0"}<br>
-⭐ ${c.type}
+⭐ ${c.type}<br><br>
+
+${!c.completed ? `
+<button onclick="completeClient('${c.id}')" 
+style="background:#1db954;color:white;border:none;padding:8px 10px;border-radius:6px;width:100%;margin-bottom:6px;">
+✔ Valider
+</button>
+` : "✅ Validé<br><br>"}
+
+<button onclick="deleteClient('${c.id}')" 
+style="background:red;color:white;border:none;padding:8px 10px;border-radius:6px;width:100%;">
+🗑 Supprimer
+</button>
+
+</div>
 `);
 
+/* =========================
+   CLICK BEHAVIOR
+========================= */
 marker.on("click",()=>{
 map.flyTo(c.coords,15,{duration:0.6});
 marker.openPopup();
@@ -270,6 +106,37 @@ document.getElementById("statsBtn").innerText="📊 Clients: "+clients.length;
 }
 
 render();
+
+/* =========================
+   ACTIONS FIX
+========================= */
+function completeClient(id){
+clients = clients.map(c=>{
+if(c.id===id) c.completed=true;
+return c;
+});
+localStorage.setItem("clients",JSON.stringify(clients));
+render();
+}
+
+function deleteClient(id){
+clients = clients.filter(c=>c.id!==id);
+localStorage.setItem("clients",JSON.stringify(clients));
+render();
+}
+
+/* =========================
+   POPUP FIX (NE PAS FERMER TROP VITE)
+========================= */
+map.on("popupopen", function(e){
+const btn = e.popup._closeButton;
+if(btn){
+btn.addEventListener("click", ev=>{
+ev.stopPropagation();
+});
+}
+});
+
 </script>
 
 </body>
