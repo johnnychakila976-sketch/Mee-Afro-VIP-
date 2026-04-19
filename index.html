@@ -26,26 +26,34 @@ body{margin:0;font-family:Arial;background:#041f17;color:white;overflow:hidden;}
 .vip-box{display:flex;gap:8px;width:100%;}
 .vip-box button{flex:1;}
 .vip-active{background:#ffd700 !important;color:black !important;}
+
 #map{
   flex:1;
   transform-style:preserve-3d;
   transition:transform 0.15s ease;
 }
-.pulse{width:14px;height:14px;border-radius:50%;animation:pulse 1.5s infinite;}
-@keyframes pulse{0%{transform:scale(1);}70%{transform:scale(1.25);}100%{transform:scale(1);}}
+
+.pulse{
+  width:14px;
+  height:14px;
+  border-radius:50%;
+  animation:pulse 1.5s infinite;
+}
+
+/* 🔥 VIP illumination seulement */
+.vip-blink{
+  box-shadow: 0 0 12px #ffd700, 0 0 20px #ffd700;
+}
+
+@keyframes pulse{
+  0%{transform:scale(1);}
+  70%{transform:scale(1.25);}
+  100%{transform:scale(1);}
+}
+
 .leaflet-popup-content-wrapper,.leaflet-popup-tip{background:#0b2b22;color:white;}
 .leaflet-popup-content{margin:12px;}
 .leaflet-popup-content button{border:none;padding:10px 12px;border-radius:8px;cursor:pointer;min-height:42px;}
-
-/* ===== AJOUT CLIGNOTEMENT VIP ===== */
-.vip-blink{
-  animation: pulse 1.5s infinite, blink 0.8s infinite;
-}
-@keyframes blink{
-  0%{opacity:1;}
-  50%{opacity:0.3;}
-  100%{opacity:1;}
-}
 
 @media(max-width:700px){
 #filters{right:140px;gap:12px;}
@@ -103,7 +111,6 @@ let selectedClientId = null;
 let clientType = "BASIC";
 
 const form = document.getElementById("form");
-const toggleBtn = document.querySelector(".toggle-btn");
 
 function updateStats(){
 document.getElementById("statsBtn").innerText="📊 Clients: "+clients.length;
@@ -138,7 +145,7 @@ if(type==="BASIC") basicBtn.classList.add("vip-active");
 else vipBtn.classList.add("vip-active");
 }
 
-/* ===== MODIF ICI ===== */
+/* 🔥 icône avec glow VIP seulement */
 function createIcon(color, type){
 return L.divIcon({
   className:"",
@@ -147,22 +154,25 @@ return L.divIcon({
 });
 }
 
-function setFilter(f,btn){
-filter=f;
-document.querySelectorAll("#filters button").forEach(b=>b.classList.remove("active"));
-if(btn) btn.classList.add("active");
-render();
-}
+/* 🔥 ESPACEMENT INTELLIGENT + LARGE */
+function offsetCoords(coords, index, total){
+  const zoom = map.getZoom();
+  const base = 0.0002;
+  const scale = Math.pow(2, (14 - zoom));
 
-function clearMarkers(){
-Object.values(markers).forEach(m=>map.removeLayer(m));
-markers={};
-}
+  const radius = (base * scale * 4) + (total * base * scale * 2);
+  const angle = (index / total) * (2 * Math.PI);
 
-/* (garde ta version actuelle offsetCoords ici si tu en as une) */
+  return [
+    coords[0] + Math.cos(angle) * radius,
+    coords[1] + Math.sin(angle) * radius
+  ];
+}
 
 function render(){
-clearMarkers();
+Object.values(markers).forEach(m=>map.removeLayer(m));
+markers={};
+
 const search = searchInput.value.trim().toLowerCase();
 
 clients.forEach(c=>{
@@ -174,8 +184,14 @@ if(search && !txt.includes(search)) return;
 
 const color = c.completed ? "#777" : (c.type==="VIP" ? "#ffd700" : "#00ff88");
 
-/* garde ton système de coords actuel */
-const marker = L.marker(c.coords,{icon:createIcon(color, c.type)}).addTo(map);
+const sameCoords = clients.filter(x =>
+  x.coords[0] === c.coords[0] && x.coords[1] === c.coords[1]
+);
+
+const index = sameCoords.findIndex(x => x.id === c.id);
+const newCoords = offsetCoords(c.coords, index, sameCoords.length);
+
+const marker = L.marker(newCoords,{icon:createIcon(color, c.type)}).addTo(map);
 
 marker.on("click",()=>openPopupClient(c));
 markers[c.id]=marker;
@@ -217,8 +233,6 @@ save();render();
 function resetAll(){
 clients = [];
 localStorage.removeItem("clients");
-clearMarkers();
-updateStats();
 render();
 }
 
@@ -268,29 +282,6 @@ document.querySelectorAll(".form input").forEach(i=>i.value="");
 closeForm();
 }
 
-/* ===== Effet 3D ===== */
-document.addEventListener("mousemove",(e)=>{
-  const x = (e.clientX / window.innerWidth - 0.5) * 6;
-  const y = (e.clientY / window.innerHeight - 0.5) * 6;
-  map.getContainer().style.transform = `rotateX(${ -y }deg) rotateY(${ x }deg)`;
-});
-
-document.addEventListener("mouseleave",()=>{
-  map.getContainer().style.transform = "rotateX(0deg) rotateY(0deg)";
-});
-
-document.addEventListener("touchmove",(e)=>{
-  const t = e.touches[0];
-  const x = (t.clientX / window.innerWidth - 0.5) * 6;
-  const y = (t.clientY / window.innerHeight - 0.5) * 6;
-  map.getContainer().style.transform = `rotateX(${ -y }deg) rotateY(${ x }deg)`;
-});
-
-document.addEventListener("touchend",()=>{
-  map.getContainer().style.transform = "rotateX(0deg) rotateY(0deg)";
-});
-
-window.addEventListener("resize",()=>map.invalidateSize());
 render();
 </script>
 </body>
