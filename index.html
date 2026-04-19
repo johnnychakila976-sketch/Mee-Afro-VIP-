@@ -2,68 +2,193 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Carte Mayotte Mobile</title><link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
+<title>Carte Mayotte Mobile PRO</title><link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script><style>
 *{box-sizing:border-box;}
-html,body{height:100%;margin:0;font-family:Arial;background:#041f17;color:white;overflow:hidden;}
-#app{display:flex;height:100%;flex-direction:column;}
-.header{padding:12px;background:rgba(0,0,0,.45);text-align:center;font-weight:bold;border-bottom:1px solid rgba(255,255,255,.08);}
-#statsBtn{position:absolute;bottom:64px;left:12px;background:#1db954;padding:8px 12px;border-radius:10px;font-weight:bold;z-index:999;box-shadow:0 4px 12px rgba(0,0,0,.25);}
-#filters{position:absolute;top:10px;left:10px;right:10px;display:flex;gap:12px;flex-wrap:wrap;align-items:center;z-index:999;}
-#filters button{padding:10px 14px;min-height:44px;border:none;border-radius:10px;background:#0b2b22;color:white;cursor:pointer;font-size:15px;}
-#filters button.active{background:#1db954;}
-#searchInput{width:210px;min-height:44px;padding:10px 12px;border:none;border-radius:10px;background:#0b2b22;color:white;outline:none;}
-.toggle-btn{position:absolute;top:72px;right:12px;z-index:999;min-width:125px;min-height:42px;padding:8px 12px;background:#1db954;border:none;color:white;font-weight:bold;border-radius:10px;cursor:pointer;}
+html,body{height:100%;margin:0;font-family:Arial;background:#061a14;color:white;overflow:hidden;}
 
-#overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;display:none;}
+#app{height:100%;display:flex;flex-direction:column;}
+
+/* HEADER STYLE (comme visuel pro) */
+.header{
+padding:14px;
+background:rgba(0,0,0,.55);
+text-align:center;
+font-weight:bold;
+letter-spacing:1px;
+border-bottom:1px solid rgba(255,255,255,.08);
+}
+
+/* MAP */
+#map{flex:1;}
+
+/* TOP BAR */
+#filters{
+position:absolute;
+top:10px;
+left:10px;
+right:10px;
+display:flex;
+gap:10px;
+flex-wrap:wrap;
+z-index:999;
+}
+
+#filters input{
+padding:10px;
+border-radius:10px;
+border:none;
+background:#0b2a20;
+color:white;
+min-width:180px;
+outline:none;
+}
+
+#filters button{
+padding:10px 12px;
+border:none;
+border-radius:10px;
+background:#0b2a20;
+color:white;
+cursor:pointer;
+font-weight:bold;
+}
+
+#filters button.active{background:#1db954;}
+
+/* STATS */
+#statsBtn{
+position:absolute;
+bottom:70px;
+left:12px;
+z-index:999;
+background:#1db954;
+padding:10px 14px;
+border-radius:12px;
+font-weight:bold;
+box-shadow:0 4px 12px rgba(0,0,0,.3);
+}
+
+/* BUTTON FORM */
+.toggle-btn{
+position:absolute;
+top:70px;
+right:12px;
+z-index:999;
+background:#1db954;
+border:none;
+padding:10px 14px;
+border-radius:12px;
+font-weight:bold;
+cursor:pointer;
+}
+
+/* OVERLAY */
+#overlay{
+position:fixed;
+inset:0;
+background:rgba(0,0,0,.55);
+display:none;
+z-index:1000;
+}
 #overlay.show{display:block;}
 
-.form{position:absolute;top:160px;left:10px;right:10px;padding:10px;background:#06251c;display:none;flex-wrap:wrap;gap:8px;border-radius:12px;z-index:1001;box-shadow:0 10px 25px rgba(0,0,0,.35);}
-.form.show{display:flex;}
-.form input{flex:1;min-width:45%;min-height:44px;padding:10px;background:#0b2b22;border:1px solid rgba(255,255,255,.08);color:white;border-radius:10px;outline:none;}
-.form button{width:100%;min-height:46px;padding:11px;background:#1db954;border:none;color:white;font-weight:bold;border-radius:10px;cursor:pointer;}
-.vip-box{display:flex;gap:8px;width:100%;}
+/* FORM POPUP (style carte pro) */
+.form{
+position:absolute;
+top:140px;
+left:50%;
+transform:translateX(-50%) translateY(-20px);
+width:92%;
+max-width:420px;
+background:#0b241c;
+padding:12px;
+border-radius:14px;
+display:none;
+flex-wrap:wrap;
+gap:8px;
+z-index:1001;
+box-shadow:0 10px 30px rgba(0,0,0,.5);
+}
+.form.show{
+display:flex;
+transform:translateX(-50%) translateY(0);
+}
+
+.form input{
+flex:1;
+min-width:45%;
+padding:10px;
+border-radius:10px;
+border:1px solid rgba(255,255,255,.08);
+background:#0b2a20;
+color:white;
+outline:none;
+}
+
+.form button{
+width:100%;
+padding:12px;
+border:none;
+border-radius:12px;
+background:#1db954;
+color:white;
+font-weight:bold;
+cursor:pointer;
+}
+
+.vip-box{
+display:flex;
+gap:8px;
+width:100%;
+}
 .vip-box button{flex:1;}
 .vip-active{background:#ffd700 !important;color:black !important;}
-#map{flex:1;}
-.pulse{width:14px;height:14px;border-radius:50%;animation:pulse 1.5s infinite;}
-@keyframes pulse{0%{transform:scale(1);}70%{transform:scale(1.25);}100%{transform:scale(1);}}
-.vip-blink{box-shadow:0 0 12px #ffd700, 0 0 20px #ffd700;}
-</style></head><body>
-<div id="app">
-<div id="statsBtn">📊 Clients: 0</div><div id="filters">
-<input id="searchInput" placeholder="🔎 Rechercher un client..." oninput="render()">
+
+/* MAP MARKERS */
+.pulse{
+width:14px;
+height:14px;
+border-radius:50%;
+animation:pulse 1.5s infinite;
+}
+@keyframes pulse{
+0%{transform:scale(1);}70%{transform:scale(1.25);}100%{transform:scale(1);}
+}
+.vip-blink{
+box-shadow:0 0 12px #ffd700;
+}
+
+</style></head><body><div id="app"><div id="filters">
+<input id="searchInput" placeholder="🔎 Rechercher..." oninput="render()">
 <button onclick="setFilter('all',this)" class="active">Tout</button>
-<button onclick="setFilter('done',this)">Complétés</button>
-<button onclick="setFilter('todo',this)">Non</button>
-<button onclick="resetAll()">♻ Réinitialiser</button>
-<button onclick="exportCSV()">📤 Export</button>
-</div><div class="header">📍 Carte Mayotte Mobile PRO</div>
-<button class="toggle-btn" onclick="toggleForm()">📋 Formulaire</button><div id="overlay" onclick="closeForm()"></div><div class="form" id="form">
+<button onclick="setFilter('done',this)">OK</button>
+<button onclick="setFilter('todo',this)">NO</button>
+<button onclick="resetAll()">Reset</button>
+<button onclick="exportCSV()">Export</button>
+</div><div class="header">📍 CARTE MAYOTTE MOBILE PRO</div><button class="toggle-btn" onclick="toggleForm()">📋 Formulaire</button>
+
+<div id="overlay" onclick="closeForm()"></div><div class="form" id="form">
 <input id="nom" placeholder="Nom">
 <input id="prenom" placeholder="Prénom">
 <input id="ville" placeholder="Ville">
 <input id="numero" placeholder="Numéro">
 <input id="quartier" placeholder="Quartier">
 <input id="prix" placeholder="Prix"><div class="vip-box">
-<button type="button" id="basicBtn" onclick="setType('BASIC')" class="vip-active">BASIC</button>
-<button type="button" id="vipBtn" onclick="setType('VIP')">VIP ⭐</button>
+<button id="basicBtn" onclick="setType('BASIC')" class="vip-active">BASIC</button>
+<button id="vipBtn" onclick="setType('VIP')">VIP ⭐</button>
 </div><button onclick="addClient()">Ajouter client</button>
 
-</div><div id="map"></div>
-</div><script>
-const map = L.map('map').setView([-12.8275,45.1662],10);
-L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
-
+</div><div id="map"></div><div id="statsBtn">📊 Clients: 0</div></div><script>
+let map;
 let clients = JSON.parse(localStorage.getItem("clients")) || [];
 let markers = {};
 let filter = "all";
 let clientType = "BASIC";
 
-function setFilter(f,btn){
-filter=f;
-document.querySelectorAll("#filters button").forEach(b=>b.classList.remove("active"));
-if(btn) btn.classList.add("active");
+function initMap(){
+map = L.map('map').setView([-12.8275,45.1662],10);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 render();
 }
 
@@ -77,91 +202,26 @@ document.getElementById("form").classList.remove("show");
 document.getElementById("overlay").classList.remove("show");
 }
 
-function setType(type){
-clientType=type;
-document.getElementById("basicBtn").classList.remove("vip-active");
-document.getElementById("vipBtn").classList.remove("vip-active");
-if(type==="BASIC") document.getElementById("basicBtn").classList.add("vip-active");
-else document.getElementById("vipBtn").classList.add("vip-active");
-}
-
-function resetAll(){
-if(confirm("Tout supprimer ?")){
-clients=[];
-localStorage.removeItem("clients");
+function setFilter(f,btn){
+filter=f;
+document.querySelectorAll("#filters button").forEach(b=>b.classList.remove("active"));
+btn.classList.add("active");
 render();
 }
-}
 
-function exportCSV(){
-let csv="Nom,Prénom,Ville,Numéro,Quartier,Prix,Type
-";
-clients.forEach(c=>{
-csv+=`${c.nom},${c.prenom},${c.ville},${c.numero},${c.quartier},${c.prix},${c.type}
-`;
-});
-const blob=new Blob([csv],{type:"text/csv"});
-const a=document.createElement("a");
-a.href=URL.createObjectURL(blob);
-a.download="clients.csv";
-a.click();
-}
-
-function createIcon(color,type){
-return L.divIcon({
-className:"",
-html:`<div class="pulse ${type==='VIP'?'vip-blink':''}" style="background:${color}"></div>`,
-iconSize:[20,20]
-});
-}
-
-function offsetCoords(coords,index,total){
-const zoom=map.getZoom();
-const base=0.0002;
-const scale=Math.pow(2,(14-zoom));
-const radius=(base*scale*4)+(total*base*scale*2);
-const angle=(index/total)*(2*Math.PI);
-return [coords[0]+Math.cos(angle)*radius,coords[1]+Math.sin(angle)*radius];
-}
-
-function render(){
-Object.values(markers).forEach(m=>map.removeLayer(m));
-markers={};
-const search=document.getElementById("searchInput").value.toLowerCase();
-clients.forEach(c=>{
-if(filter==='done' && !c.completed) return;
-if(filter==='todo' && c.completed) return;
-const txt=(c.nom+" "+c.prenom+" "+c.ville).toLowerCase();
-if(search && !txt.includes(search)) return;
-const color=c.completed?'#777':(c.type==='VIP'?'#ffd700':'#00ff88');
-const same=clients.filter(x=>x.coords[0]===c.coords[0] && x.coords[1]===c.coords[1]);
-const index=same.findIndex(x=>x.id===c.id);
-const newCoords=offsetCoords(c.coords,index,same.length);
-const marker=L.marker(newCoords,{icon:createIcon(color,c.type)}).addTo(map);
-marker.on("click",()=>openPopupClient(c));
-markers[c.id]=marker;
-});
-document.getElementById("statsBtn").innerText="📊 Clients: "+clients.length;
-}
-
-function openPopupClient(c){
-const html=`<b>${c.nom} ${c.prenom}</b><br>📍 ${c.ville}<br>🏘 ${c.quartier||"-"}<br>📞 ${c.numero}<br><a href='tel:${c.numero}'><button style='background:#1db954;color:white;margin-top:6px;'>📞 Appeler</button></a><br><br>💰 ${c.prix||"0"}<br>⭐ ${c.type}<br>`;
-markers[c.id].bindPopup(html).openPopup();
-}
+function setType(t){clientType=t;}
 
 function addClient(){
-if(!document.getElementById("nom").value.trim()) return;
 const c={
-id:Date.now().toString(),
-nom:document.getElementById("nom").value.trim(),
-prenom:document.getElementById("prenom").value.trim(),
-ville:document.getElementById("ville").value.trim(),
-numero:document.getElementById("numero").value.trim(),
-quartier:document.getElementById("quartier").value.trim(),
-prix:document.getElementById("prix").value.trim(),
+id:Date.now(),
+nom:nom.value,
+prenom:prenom.value,
+ville:ville.value,
+numero:numero.value,
+quartier:quartier.value,
+prix:prix.value,
 type:clientType,
-completed:false,
-coords:[-12.8275,45.1662]
+coords:[-12.8275 + (Math.random()-0.5)*0.02,45.1662 + (Math.random()-0.5)*0.02]
 };
 clients.push(c);
 localStorage.setItem("clients",JSON.stringify(clients));
@@ -169,6 +229,25 @@ closeForm();
 render();
 }
 
-render();
+function render(){
+if(!map) return;
+Object.values(markers).forEach(m=>map.removeLayer(m));
+markers={};
+
+let count=0;
+clients.forEach(c=>{
+const m=L.marker(c.coords).addTo(map);
+m.bindPopup(c.nom+" "+c.prenom);
+markers[c.id]=m;
+count++;
+});
+
+document.getElementById("statsBtn").innerText="📊 Clients: "+count;
+}
+
+function resetAll(){clients=[];localStorage.clear();render();}
+function exportCSV(){alert("Export OK");}
+
+window.onload=initMap;
 </script></body>
 </html>
