@@ -1,177 +1,40 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-<meta charset="UTF-8">
-
-<!-- 📱 MOBILE FULL SCREEN -->
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-
-<title>Carte Mayotte Mobile PRO</title>
-
-<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
-<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-
-<style>
-
-/* 🌍 GLOBAL FULL SCREEN */
-html, body {
-  margin: 0;
-  padding: 0;
-  height: 100%;
-  width: 100%;
-  overflow: hidden;
-  font-family: Arial;
-}
-
-#app {
-  height: 100vh;
-  width: 100vw;
-  position: relative;
-}
-
-/* 🗺 MAP FULL SCREEN */
-#map {
-  height: 100%;
-  width: 100%;
-}
-
-/* 📊 STATS */
-#statsBtn {
-  position: fixed;
-  top: 10px;
-  left: 10px;
-  z-index: 9999;
-  background: rgba(0,0,0,0.7);
-  color: white;
-  padding: 8px 12px;
-  border-radius: 10px;
-  font-size: 13px;
-}
-
-/* ⭐ VIP */
-#vipRanking {
-  position: fixed;
-  top: 50px;
-  left: 10px;
-  z-index: 9999;
-  background: rgba(0,0,0,0.6);
-  color: gold;
-  padding: 8px;
-  border-radius: 10px;
-  font-size: 11px;
-  max-width: 180px;
-}
-
-/* 🔎 SEARCH */
-#search {
-  position: fixed;
-  top: 120px;
-  left: 10px;
-  z-index: 9999;
-  width: 180px;
-  padding: 6px;
-  border-radius: 8px;
-  border: none;
-}
-
-/* 📋 FORM */
-.form {
-  position: fixed;
-  bottom: 60px;
-  left: 10px;
-  right: 10px;
-  z-index: 9999;
-  background: rgba(0,0,0,0.85);
-  padding: 10px;
-  border-radius: 12px;
-  display: none;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.form input, .form button {
-  padding: 8px;
-  border-radius: 8px;
-  border: none;
-}
-
-/* 🔘 FILTERS */
-#filters {
-  position: fixed;
-  bottom: 10px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 9999;
-  display: flex;
-  gap: 5px;
-}
-
-#filters button {
-  font-size: 12px;
-  padding: 6px 8px;
-  border-radius: 8px;
-}
-
-/* 🟢 BASIC */
-.pulse.basic{
-  width:14px;
-  height:14px;
-  border-radius:50%;
-  background:#00ff88;
-  box-shadow:0 0 10px #00ff88;
-}
-
-/* 🟡 VIP GLOW */
-.pulse.vip{
-  width:16px;
-  height:16px;
-  border-radius:50%;
-  background:gold;
-  box-shadow:0 0 15px gold,0 0 30px orange;
-  animation: glow 1.5s infinite alternate;
-}
-
-@keyframes glow{
-  from{transform:scale(1);opacity:0.7;}
-  to{transform:scale(1.3);opacity:1;}
-}
-
-</style>
-</head>
-
-<body>
-
 <div id="app">
 
 <div id="statsBtn">📊 Clients: 0</div>
+
+<!-- 🆕 CLASSEMENT VIP -->
 <div id="vipRanking"></div>
 
-<input id="search" placeholder="🔎 Recherche..." oninput="searchClients()" />
+<input id="search" placeholder="🔎 Rechercher un client..." oninput="searchClients()" />
 
-<div class="form">
+<div id="filters">
+  <button onclick="setFilter('all')" class="active">Tout</button>
+  <button onclick="setFilter('done')">Complétés</button>
+  <button onclick="setFilter('todo')">Non</button>
+  <button onclick="exportCSV()">📤 Export</button>
+</div>
+
+<div class="header">📍 Carte Mayotte Mobile PRO</div>
+
+<button class="toggle-btn" onclick="toggleForm()">📋 Formulaire</button>
+
+<div class="form" id="form">
+
   <input id="nom" placeholder="Nom"/>
   <input id="prenom" placeholder="Prénom"/>
   <input id="ville" placeholder="Ville"/>
   <input id="numero" placeholder="Numéro"/>
   <input id="adresse" placeholder="Adresse"/>
 
-  <button onclick="setType('basic')">BASIC</button>
-  <button onclick="setType('vip')">VIP ⭐</button>
+  <div style="margin:10px 0;">
+    <button type="button" onclick="setType('basic')" id="basicBtn">BASIC</button>
+    <button type="button" onclick="setType('vip')" id="vipBtn">VIP ⭐</button>
+  </div>
 
   <button onclick="addClient()">Ajouter client</button>
-  <button onclick="toggleForm()">Fermer</button>
 </div>
 
 <div id="map"></div>
-
-<div id="filters">
-  <button onclick="setFilter('all')">Tout</button>
-  <button onclick="setFilter('done')">OK</button>
-  <button onclick="setFilter('todo')">En cours</button>
-  <button onclick="exportCSV()">Export</button>
-</div>
-
 </div>
 
 <script>
@@ -186,48 +49,78 @@ let searchQuery="";
 let clientType="basic";
 
 /* TYPE */
-function setType(t){ clientType=t; }
-
-/* FORM */
-function toggleForm(){
-  const f=document.querySelector(".form");
-  f.style.display = f.style.display==="flex"?"none":"flex";
-}
-
-/* SAVE */
-function save(){
-  localStorage.setItem("clients",JSON.stringify(clients));
-  updateStats();
-  updateVIPRanking();
+function setType(type){
+  clientType = type;
 }
 
 /* STATS */
 function updateStats(){
-  const total=clients.length;
-  const done=clients.filter(c=>c.completed).length;
+  const total = clients.length;
+  const done = clients.filter(c => c.completed).length;
+  const todo = total - done;
 
-  document.getElementById("statsBtn").innerHTML=
-  `📊 Total:${total} | ✅:${done} | ⏳:${total-done}`;
+  document.getElementById("statsBtn").innerHTML = `
+    📊 Total: ${total} | ✅ OK: ${done} | ⏳ En cours: ${todo}
+  `;
 }
 
-/* VIP */
+/* 🆕 VIP RANKING */
 function updateVIPRanking(){
-  const vip=clients.filter(c=>c.type==="vip");
-  vip.sort((a,b)=>a.completed-b.completed);
+  const vipClients = clients.filter(c => c.type === "vip");
 
-  let html="⭐ VIP:<br>";
-  vip.slice(0,5).forEach((c,i)=>{
-    html+=`${i+1}. ${c.nom} ${c.completed?"✅":"⏳"}<br>`;
+  const sorted = vipClients.sort((a,b)=>{
+    return (a.completed - b.completed);
   });
 
-  document.getElementById("vipRanking").innerHTML=html;
+  let html = "⭐ VIP Ranking:<br>";
+
+  sorted.slice(0,5).forEach((c,i)=>{
+    html += `${i+1}. ${c.nom} ${c.prenom} ${c.completed ? "✅" : "⏳"}<br>`;
+  });
+
+  document.getElementById("vipRanking").innerHTML = html;
+}
+
+function save(){
+  localStorage.setItem("clients",JSON.stringify(clients));
+  updateStats();
+  updateVIPRanking(); // 🆕 AJOUT UNIQUEMENT
+}
+
+function toggleForm(){
+  const f=document.getElementById("form");
+  f.style.display=f.style.display==="flex"?"none":"flex";
 }
 
 /* ICON */
-function icon(type){
+function createIcon(type){
+  if(type === "vip"){
+    return L.divIcon({
+      className:"",
+      html:`<div class="pulse vip"></div>`,
+      iconSize:[20,20]
+    });
+  }
+
   return L.divIcon({
-    html:`<div class="pulse ${type}"></div>`
+    className:"",
+    html:`<div class="pulse basic"></div>`,
+    iconSize:[20,20]
   });
+}
+
+/* FILTER */
+function setFilter(f){
+  filter=f;
+  document.querySelectorAll("#filters button").forEach(b=>b.classList.remove("active"));
+  event.target.classList.add("active");
+  render();
+}
+
+/* SEARCH */
+function searchClients(){
+  searchQuery = document.getElementById("search").value.toLowerCase();
+  render();
 }
 
 /* RENDER */
@@ -236,23 +129,73 @@ function render(){
   markers={};
 
   clients.forEach(c=>{
-    const m=L.marker(c.coords,{icon:icon(c.type)}).addTo(map);
+
+    if(filter==="done" && !c.completed) return;
+    if(filter==="todo" && c.completed) return;
+
+    const fullName = (c.nom + " " + c.prenom).toLowerCase();
+    if(searchQuery && !fullName.includes(searchQuery)) return;
+
+    const m=L.marker(c.coords,{
+      icon:createIcon(c.type)
+    }).addTo(map);
 
     m.bindPopup(`
       <b>${c.nom} ${c.prenom}</b><br>
-      ⭐ ${c.type}<br>
-      📍 ${c.ville}
+      ⭐ Type: ${c.type.toUpperCase()}<br>
+      📍 ${c.ville}<br>
+      🏠 ${c.adresse}<br>
+      📞 ${c.numero}<br>
+      Status: ${c.completed ? "✅ Terminé" : "⏳ En cours"}<br><br>
+
+      ${!c.completed ? `
+        <button onclick="completeClient('${c.id}')">✔ Terminer</button>
+      ` : ""}
     `);
 
     markers[c.id]=m;
   });
 
   updateStats();
-  updateVIPRanking();
+  updateVIPRanking(); // 🆕 AJOUT
+}
+
+/* COMPLETE */
+function completeClient(id){
+  clients=clients.map(c=>{
+    if(c.id===id) c.completed=true;
+    return c;
+  });
+  save();
+  render();
+}
+
+/* EXPORT */
+function exportCSV(){
+  let csv="Nom,Prénom,Ville,Numéro,Adresse,Type,Status\n";
+  clients.forEach(c=>{
+    csv+=`${c.nom},${c.prenom},${c.ville},${c.numero},${c.adresse},${c.type},${c.completed?"OK":"NON"}\n`;
+  });
+
+  const blob=new Blob([csv],{type:"text/csv"});
+  const url=URL.createObjectURL(blob);
+
+  const a=document.createElement("a");
+  a.href=url;
+  a.download="clients.csv";
+  a.click();
+}
+
+/* GEO */
+async function getCoords(ville){
+  const res=await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${ville}, Mayotte`);
+  const d=await res.json();
+  if(d[0]) return [parseFloat(d[0].lat),parseFloat(d[0].lon)];
+  return [-12.8275,45.1662];
 }
 
 /* ADD */
-function addClient(){
+async function addClient(){
   const c={
     id:Date.now().toString(),
     nom:nom.value,
@@ -260,41 +203,43 @@ function addClient(){
     ville:ville.value,
     numero:numero.value,
     adresse:adresse.value,
-    type:clientType,
     completed:false,
-    coords:[-12.8275,45.1662]
+    type:clientType,
+    coords:await getCoords(ville.value)
   };
 
   clients.push(c);
   save();
   render();
 
+  map.flyTo(c.coords,13);
   document.querySelectorAll("input").forEach(i=>i.value="");
-}
-
-/* SEARCH */
-function searchClients(){
-  searchQuery=document.getElementById("search").value.toLowerCase();
-  render();
-}
-
-/* EXPORT */
-function exportCSV(){
-  let csv="Nom,Prénom,Ville,Numéro,Type\n";
-  clients.forEach(c=>{
-    csv+=`${c.nom},${c.prenom},${c.ville},${c.numero},${c.type}\n`;
-  });
-
-  const blob=new Blob([csv],{type:"text/csv"});
-  const a=document.createElement("a");
-  a.href=URL.createObjectURL(blob);
-  a.download="clients.csv";
-  a.click();
 }
 
 render();
 
 </script>
 
-</body>
-</html>
+<style>
+.pulse.basic{
+  width:14px;
+  height:14px;
+  border-radius:50%;
+  background:#00ff88;
+  box-shadow:0 0 10px #00ff88;
+}
+
+.pulse.vip{
+  width:16px;
+  height:16px;
+  border-radius:50%;
+  background:gold;
+  box-shadow:0 0 15px gold, 0 0 30px orange;
+  animation: glow 1.5s infinite alternate;
+}
+
+@keyframes glow{
+  from{transform:scale(1);opacity:0.7;}
+  to{transform:scale(1.3);opacity:1;}
+}
+</style>
