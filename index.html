@@ -6,23 +6,29 @@
 <title>Carte Mayotte Mobile</title>
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
+
+<!-- CLUSTER -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.Default.css">
+
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster/dist/leaflet.markercluster.js"></script>
 
 <style>
 *{box-sizing:border-box;}
 body{margin:0;font-family:Arial;background:#041f17;color:white;overflow:hidden;}
 #app{display:flex;height:100vh;flex-direction:column;}
 .header{padding:12px;background:rgba(0,0,0,.45);text-align:center;font-weight:bold;border-bottom:1px solid rgba(255,255,255,.08);}
-#statsBtn{position:absolute;bottom:64px;left:12px;background:#1db954;padding:8px 12px;border-radius:10px;font-weight:bold;z-index:999;box-shadow:0 4px 12px rgba(0,0,0,.25);}
-#filters{position:absolute;top:10px;left:10px;right:10px;display:flex;gap:12px;flex-wrap:wrap;align-items:center;z-index:999;}
-#filters button{padding:10px 14px;min-height:44px;border:none;border-radius:10px;background:#0b2b22;color:white;cursor:pointer;font-size:15px;}
+#statsBtn{position:absolute;bottom:64px;left:12px;background:#1db954;padding:8px 12px;border-radius:10px;font-weight:bold;z-index:999;}
+#filters{position:absolute;top:10px;left:10px;right:10px;display:flex;gap:12px;flex-wrap:wrap;z-index:999;}
+#filters button{padding:10px 14px;border:none;border-radius:10px;background:#0b2b22;color:white;cursor:pointer;}
 #filters button.active{background:#1db954;}
-#searchInput{width:210px;min-height:44px;padding:10px 12px;border:none;border-radius:10px;background:#0b2b22;color:white;outline:none;}
-.toggle-btn{position:absolute;top:72px;right:12px;z-index:999;min-width:125px;min-height:42px;padding:8px 12px;background:#1db954;border:none;color:white;font-weight:bold;border-radius:10px;cursor:pointer;}
+#searchInput{width:210px;padding:10px;border:none;border-radius:10px;background:#0b2b22;color:white;}
+.toggle-btn{position:absolute;top:72px;right:12px;z-index:999;padding:8px 12px;background:#1db954;border:none;color:white;font-weight:bold;border-radius:10px;cursor:pointer;}
 .form{position:absolute;top:160px;left:10px;right:10px;padding:10px;background:#06251c;display:none;flex-wrap:wrap;gap:8px;border-radius:12px;z-index:1001;}
 .form.show{display:flex;}
-.form input{flex:1;min-width:45%;min-height:44px;padding:10px;background:#0b2b22;border:1px solid rgba(255,255,255,.08);color:white;border-radius:10px;}
-.form button{width:100%;min-height:46px;padding:11px;background:#1db954;border:none;color:white;font-weight:bold;border-radius:10px;cursor:pointer;}
+.form input{flex:1;min-width:45%;padding:10px;background:#0b2b22;border:none;color:white;border-radius:10px;}
+.form button{width:100%;padding:11px;background:#1db954;border:none;color:white;font-weight:bold;border-radius:10px;cursor:pointer;}
 .vip-box{display:flex;gap:8px;width:100%;}
 .vip-box button{flex:1;}
 .vip-active{background:#ffd700 !important;color:black !important;}
@@ -38,7 +44,7 @@ body{margin:0;font-family:Arial;background:#041f17;color:white;overflow:hidden;}
 <div id="statsBtn">📊 Clients: 0</div>
 
 <div id="filters">
-<input id="searchInput" placeholder="🔎 Rechercher..." oninput="debouncedRender()">
+<input id="searchInput" placeholder="🔎 Rechercher..." oninput="render()">
 <button onclick="setFilter('all',this)" class="active">Tout</button>
 <button onclick="setFilter('done',this)">Complétés</button>
 <button onclick="setFilter('todo',this)">Non</button>
@@ -70,37 +76,87 @@ body{margin:0;font-family:Arial;background:#041f17;color:white;overflow:hidden;}
 
 <script>
 const map = L.map('map').setView([-12.8275,45.1662],10);
+
 L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
 
+/* =========================
+   BASE VILLAGES MAYOTTE
+========================= */
+const villages = [
+{ nom:"Mamoudzou", coords:[-12.7808,45.2278] },
+{ nom:"Koungou", coords:[-12.7333,45.2167] },
+{ nom:"Dzaoudzi", coords:[-12.7833,45.2833] },
+{ nom:"Pamandzi", coords:[-12.7897,45.2797] },
+{ nom:"Dembeni", coords:[-12.8375,45.1842] },
+{ nom:"Sada", coords:[-12.8500,45.1020] },
+{ nom:"Chiconi", coords:[-12.8320,45.1060] },
+{ nom:"Tsingoni", coords:[-12.7850,45.1230] },
+{ nom:"Ouangani", coords:[-12.8450,45.1380] },
+{ nom:"Bandraboua", coords:[-12.7020,45.1200] },
+{ nom:"Acoua", coords:[-12.7220,45.0580] },
+{ nom:"Mtsamboro", coords:[-12.6870,45.0670] },
+{ nom:"Bouéni", coords:[-12.9130,45.1520] },
+{ nom:"Bandrélé", coords:[-12.9100,45.1920] },
+{ nom:"Chirongui", coords:[-12.9350,45.1480] },
+{ nom:"Kani-Kéli", coords:[-12.9560,45.1230] }
+];
+
+/* =========================
+   DATA
+========================= */
 let clients = JSON.parse(localStorage.getItem("clients")) || [];
-let markers = {};
 let filter = "all";
 let clientType = "BASIC";
 
-let rendering = false;
-let renderTimeout = null;
+/* =========================
+   CLUSTER
+========================= */
+let clusterGroup = L.markerClusterGroup();
+map.addLayer(clusterGroup);
 
 /* =========================
-   DOM SAFE
+   DOM
 ========================= */
-const nomEl = document.getElementById("nom");
-const prenomEl = document.getElementById("prenom");
-const villeEl = document.getElementById("ville");
-const numeroEl = document.getElementById("numero");
-const quartierEl = document.getElementById("quartier");
-const prixEl = document.getElementById("prix");
+const nomEl=document.getElementById("nom");
+const prenomEl=document.getElementById("prenom");
+const villeEl=document.getElementById("ville");
+const numeroEl=document.getElementById("numero");
+const quartierEl=document.getElementById("quartier");
+const prixEl=document.getElementById("prix");
 
 /* =========================
-   INIT
+   SIMILARITY (FUZZY MATCH)
 ========================= */
-window.addEventListener("load", ()=>render());
+function similarity(a,b){
+a=a.toLowerCase();
+b=b.toLowerCase();
+let score=0;
+for(let i=0;i<Math.min(a.length,b.length);i++){
+if(a[i]===b[i]) score++;
+}
+return score;
+}
 
 /* =========================
-   DEBOUNCE
+   GET COORDS LOCAL
 ========================= */
-function debouncedRender(){
-clearTimeout(renderTimeout);
-renderTimeout = setTimeout(render,80);
+function getCoords(ville){
+if(!ville) return [-12.8275,45.1662];
+
+let best=null;
+let bestScore=0;
+
+for(let v of villages){
+const score = similarity(ville,v.nom);
+if(score>bestScore){
+bestScore=score;
+best=v;
+}
+}
+
+if(bestScore>=3) return best.coords;
+
+return [-12.8275,45.1662];
 }
 
 /* =========================
@@ -112,20 +168,20 @@ setTimeout(()=>map.invalidateSize(),200);
 }
 
 /* =========================
-   TYPE CLIENT (FIXED)
+   TYPE
 ========================= */
 function setType(type){
-clientType = type;
+clientType=type;
 
-document.getElementById("basicBtn").classList.remove("vip-active");
-document.getElementById("vipBtn").classList.remove("vip-active");
+basicBtn.classList.remove("vip-active");
+vipBtn.classList.remove("vip-active");
 
-if(type==="BASIC") document.getElementById("basicBtn").classList.add("vip-active");
-else document.getElementById("vipBtn").classList.add("vip-active");
+if(type==="BASIC") basicBtn.classList.add("vip-active");
+else vipBtn.classList.add("vip-active");
 }
 
 /* =========================
-   ADD CLIENT SAFE
+   ADD CLIENT
 ========================= */
 function addClient(){
 
@@ -141,7 +197,7 @@ quartier:quartierEl.value.trim(),
 prix:prixEl.value.trim(),
 type:clientType,
 completed:false,
-coords:[-12.8275,45.1662]
+coords:getCoords(villeEl.value.trim())
 };
 
 clients.push(c);
@@ -149,12 +205,7 @@ localStorage.setItem("clients",JSON.stringify(clients));
 
 render();
 
-nomEl.value="";
-prenomEl.value="";
-villeEl.value="";
-numeroEl.value="";
-quartierEl.value="";
-prixEl.value="";
+nomEl.value=prenomEl.value=villeEl.value=numeroEl.value=quartierEl.value=prixEl.value="";
 }
 
 /* =========================
@@ -162,7 +213,6 @@ prixEl.value="";
 ========================= */
 function resetAll(){
 clients=[];
-markers={};
 localStorage.removeItem("clients");
 render();
 }
@@ -174,7 +224,7 @@ function exportCSV(){
 let csv="Nom,Prénom,Ville,Numéro,Quartier,Prix,Type,Status\n";
 
 clients.forEach(c=>{
-csv+=`${c.nom||""},${c.prenom||""},${c.ville||""},${c.numero||""},${c.quartier||""},${c.prix||""},${c.type||""},${c.completed?"OK":"NON"}\n`;
+csv+=`${c.nom},${c.prenom},${c.ville},${c.numero},${c.quartier},${c.prix},${c.type},${c.completed?"OK":"NON"}\n`;
 });
 
 const blob=new Blob([csv],{type:"text/csv"});
@@ -198,92 +248,46 @@ render();
 }
 
 /* =========================
-   ICON
-========================= */
-function icon(color){
-return L.divIcon({
-className:"",
-html:`<div class="pulse" style="background:${color}"></div>`,
-iconSize:[14,14]
-});
-}
-
-/* =========================
-   OFFSET FIX FINAL
-========================= */
-function offsetCoords(coords,index,total){
-
-if(!coords || !Array.isArray(coords)) return [-12.8275,45.1662];
-if(total<=1) return coords;
-
-const zoom = map.getZoom();
-const base = 0.0003;
-const scale = Math.pow(2,(14-zoom));
-
-const radius = (base*scale*3)+(total*base*scale);
-const angle = index/total*(2*Math.PI);
-
-return [
-coords[0]+Math.cos(angle)*radius,
-coords[1]+Math.sin(angle)*radius
-];
-}
-
-/* =========================
-   CLEAR MARKERS SAFE
-========================= */
-function clearMarkers(){
-for(let id in markers){
-try{ map.removeLayer(markers[id]); }catch(e){}
-}
-markers={};
-}
-
-/* =========================
-   RENDER FINAL STABLE
+   RENDER
 ========================= */
 function render(){
 
-if(rendering) return;
-rendering = true;
-
-clearMarkers();
+clusterGroup.clearLayers();
 
 const search=(document.getElementById("searchInput")?.value||"").toLowerCase();
 
 clients.forEach(c=>{
 
-if(!c.coords || !Array.isArray(c.coords)) return;
-
 if(filter==="done" && !c.completed) return;
 if(filter==="todo" && c.completed) return;
 
-const txt=(c.nom+" "+c.prenom+" "+c.ville+" "+(c.quartier||"")).toLowerCase();
+const txt=(c.nom+" "+c.prenom+" "+c.ville).toLowerCase();
 if(search && !txt.includes(search)) return;
 
 const color=c.completed?"#777":(c.type==="VIP"?"#ffd700":"#00ff88");
 
-const same=clients.filter(x =>
-x.coords &&
-Math.abs(x.coords[0]-c.coords[0])<0.000001 &&
-Math.abs(x.coords[1]-c.coords[1])<0.000001
-);
+const marker=L.marker(c.coords,{
+icon:L.divIcon({
+className:"",
+html:`<div class="pulse" style="background:${color}"></div>`,
+iconSize:[14,14]
+})
+});
 
-const index=same.findIndex(x=>x.id===c.id);
+marker.bindPopup(`
+<b>${c.nom} ${c.prenom}</b><br>
+📍 ${c.ville}<br>
+🏘 ${c.quartier||"-"}<br>
+📞 ${c.numero||"-"}<br>
+💰 ${c.prix||"0"}<br>
+⭐ ${c.type}<br>
+${c.completed?"✅ Terminé":"⏳ En cours"}
+`);
 
-const newCoords=offsetCoords(c.coords,index,same.length);
-
-const marker=L.marker(newCoords,{
-icon:icon(color)
-}).addTo(map);
-
-markers[c.id]=marker;
-
+clusterGroup.addLayer(marker);
 });
 
 document.getElementById("statsBtn").innerText="📊 Clients: "+clients.length;
-
-rendering=false;
 }
 
 render();
