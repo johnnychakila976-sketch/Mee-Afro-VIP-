@@ -81,42 +81,17 @@ L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').add
 let clients = JSON.parse(localStorage.getItem("clients")) || [];
 let markers = {};
 let filter = "all";
+let clientType = "BASIC";
 
 /* =========================
-   RESET FIX
+   SAFE LOAD
 ========================= */
-function resetAll(){
-  clients = [];
-  markers = {};
-  localStorage.removeItem("clients");
-  render();
-}
+window.addEventListener("load",()=>render());
+
+const searchInput = document.getElementById("searchInput");
 
 /* =========================
-   EXPORT FIX
-========================= */
-function exportCSV(){
-let csv="Nom,Prénom,Ville,Numéro,Quartier,Prix,Type,Status\n";
-
-clients.forEach(c=>{
-csv += `${c.nom || ""},${c.prenom || ""},${c.ville || ""},${c.numero || ""},${c.quartier || ""},${c.prix || ""},${c.type || ""},${c.completed ? "OK" : "NON"}\n`;
-});
-
-const blob = new Blob([csv],{type:"text/csv"});
-const url = URL.createObjectURL(blob);
-
-const a = document.createElement("a");
-a.href = url;
-a.download = "clients.csv";
-document.body.appendChild(a);
-a.click();
-a.remove();
-
-URL.revokeObjectURL(url);
-}
-
-/* =========================
-   FORM FIX
+   FORM
 ========================= */
 function toggleForm(){
 const form = document.getElementById("form");
@@ -132,43 +107,177 @@ if(form.classList.contains("show")){
 setTimeout(()=>map.invalidateSize(),300);
 }
 
+function closeForm(){
+const form = document.getElementById("form");
+form.classList.remove("show");
+setTimeout(()=>form.style.display="none",200);
+}
+
+/* =========================
+   TYPE
+========================= */
+function setType(type){
+clientType = type;
+
+document.getElementById("basicBtn").classList.remove("vip-active");
+document.getElementById("vipBtn").classList.remove("vip-active");
+
+if(type === "BASIC"){
+document.getElementById("basicBtn").classList.add("vip-active");
+}else{
+document.getElementById("vipBtn").classList.add("vip-active");
+}
+}
+
+/* =========================
+   ADD CLIENT (FIX FINAL)
+========================= */
+function addClient(){
+
+const nom = document.getElementById("nom");
+const prenom = document.getElementById("prenom");
+const ville = document.getElementById("ville");
+const numero = document.getElementById("numero");
+const quartier = document.getElementById("quartier");
+const prix = document.getElementById("prix");
+
+if(!nom.value.trim()) return;
+
+const c = {
+id: Date.now().toString(),
+nom: nom.value.trim(),
+prenom: prenom.value.trim(),
+ville: ville.value.trim(),
+numero: numero.value.trim(),
+quartier: quartier.value.trim(),
+prix: prix.value.trim(),
+type: clientType || "BASIC",
+completed: false,
+coords: [-12.8275,45.1662]
+};
+
+clients.push(c);
+localStorage.setItem("clients",JSON.stringify(clients));
+
+render();
+
+/* reset */
+nom.value="";
+prenom.value="";
+ville.value="";
+numero.value="";
+quartier.value="";
+prix.value="";
+
+closeForm();
+}
+
+/* =========================
+   RESET
+========================= */
+function resetAll(){
+clients=[];
+markers={};
+localStorage.removeItem("clients");
+render();
+}
+
+/* =========================
+   EXPORT
+========================= */
+function exportCSV(){
+let csv="Nom,Prénom,Ville,Numéro,Quartier,Prix,Type,Status\n";
+
+clients.forEach(c=>{
+csv += `${c.nom||""},${c.prenom||""},${c.ville||""},${c.numero||""},${c.quartier||""},${c.prix||""},${c.type||""},${c.completed?"OK":"NON"}\n`;
+});
+
+const blob=new Blob([csv],{type:"text/csv"});
+const url=URL.createObjectURL(blob);
+
+const a=document.createElement("a");
+a.href=url;
+a.download="clients.csv";
+document.body.appendChild(a);
+a.click();
+a.remove();
+
+URL.revokeObjectURL(url);
+}
+
 /* =========================
    FILTER
 ========================= */
 function setFilter(f,btn){
-  filter=f;
-  document.querySelectorAll("#filters button").forEach(b=>b.classList.remove("active"));
-  if(btn) btn.classList.add("active");
-  render();
+filter=f;
+
+document.querySelectorAll("#filters button").forEach(b=>{
+if(b.innerText.includes("Tout")||b.innerText.includes("Compl")||b.innerText.includes("Non")){
+b.classList.remove("active");
+}
+});
+
+if(btn) btn.classList.add("active");
+render();
 }
 
-/* ICON */
+/* =========================
+   ICON
+========================= */
 function createIcon(color,type){
 return L.divIcon({
-  className:"",
-  html:`<div class="pulse ${type==='VIP'?'vip-blink':''}" style="background:${color}"></div>`,
-  iconSize:[20,20]
+className:"",
+html:`<div class="pulse ${type==='VIP'?'vip-blink':''}" style="background:${color}"></div>`,
+iconSize:[14,14]
 });
 }
 
-/* RENDER */
+/* =========================
+   OFFSET
+========================= */
+function offsetCoords(coords,index,total){
+const zoom=map.getZoom();
+const base=0.0002;
+const scale=Math.pow(2,(14-zoom));
+
+const radius=(base*scale*4)+(total*base*scale*2);
+const angle=(index/total)*(2*Math.PI);
+
+return [
+coords[0]+Math.cos(angle)*radius,
+coords[1]+Math.sin(angle)*radius
+];
+}
+
+/* =========================
+   RENDER SAFE
+========================= */
 function render(){
+
 Object.values(markers).forEach(m=>map.removeLayer(m));
 markers={};
 
-const search = searchInput.value.toLowerCase();
+const search=(searchInput?.value||"").toLowerCase();
 
 clients.forEach(c=>{
 
-if(filter==="done" && c.completed!==true) return;
-if(filter==="todo" && c.completed===true) return;
+if(filter==="done" && !c.completed) return;
+if(filter==="todo" && c.completed) return;
 
-const txt=(c.nom+" "+c.prenom+" "+c.ville).toLowerCase();
+const txt=(c.nom+" "+c.prenom+" "+c.ville+" "+(c.quartier||"")).toLowerCase();
 if(search && !txt.includes(search)) return;
 
-const color = c.completed ? "#777" : (c.type==="VIP" ? "#ffd700" : "#00ff88");
+const color=c.completed?"#777":(c.type==="VIP"?"#ffd700":"#00ff88");
 
-const marker = L.marker(c.coords,{icon:createIcon(color,c.type)}).addTo(map);
+const same=clients.filter(x=>x.coords);
+const index=same.findIndex(x=>x.id===c.id);
+
+const newCoords=offsetCoords(c.coords,index,same.length);
+
+const marker=L.marker(newCoords,{
+icon:createIcon(color,c.type)
+}).addTo(map);
+
 markers[c.id]=marker;
 
 });
