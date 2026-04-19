@@ -37,7 +37,6 @@ body{
   z-index:999;
 }
 
-/* FILTER BAR */
 #filters{
   position:absolute;
   top:10px;
@@ -101,7 +100,6 @@ body{
 
 .pulse{
   width:14px;height:14px;
-  background:#00ff88;
   border-radius:50%;
   animation:pulse 1.5s infinite;
 }
@@ -110,6 +108,20 @@ body{
   0%{transform:scale(1);}
   70%{transform:scale(1.3);}
   100%{transform:scale(1);}
+}
+
+/* MODAL */
+#modal{
+  position:fixed;
+  bottom:0;
+  left:0;
+  right:0;
+  background:#0b2b22;
+  padding:15px;
+  display:none;
+  z-index:9999;
+  border-top-left-radius:15px;
+  border-top-right-radius:15px;
 }
 </style>
 </head>
@@ -143,6 +155,15 @@ body{
 <div id="map"></div>
 </div>
 
+<!-- MODAL -->
+<div id="modal">
+  <div id="modalContent"></div>
+  <button onclick="closeModal()">Fermer</button>
+  <button onclick="deleteClient()" style="background:red;color:white;margin-top:10px;">
+    🗑 Supprimer
+  </button>
+</div>
+
 <script>
 
 const map = L.map('map').setView([-12.8275,45.1662],10);
@@ -151,6 +172,7 @@ L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').add
 let clients = JSON.parse(localStorage.getItem("clients")) || [];
 let markers = {};
 let filter="all";
+let selectedClientId=null;
 
 function updateStats(){
   document.getElementById("statsBtn").innerText="📊 Clients: "+clients.length;
@@ -166,10 +188,11 @@ function toggleForm(){
   f.style.display=f.style.display==="flex"?"none":"flex";
 }
 
-function createIcon(){
+/* ICON */
+function createIcon(color){
   return L.divIcon({
     className:"",
-    html:`<div class="pulse"></div>`,
+    html:`<div class="pulse" style="background:${color}"></div>`,
     iconSize:[20,20]
   });
 }
@@ -182,6 +205,7 @@ function setFilter(f){
   render();
 }
 
+/* RENDER */
 function render(){
   Object.values(markers).forEach(m=>map.removeLayer(m));
   markers={};
@@ -190,21 +214,35 @@ function render(){
     if(filter==="done" && !c.completed) return;
     if(filter==="todo" && c.completed) return;
 
-    const m=L.marker(c.coords,{icon:createIcon()}).addTo(map);
+    const m=L.marker(c.coords,{
+      icon:createIcon(c.completed ? "#777" : "#00ff88")
+    }).addTo(map);
 
-    m.bindPopup(`
-      <b>${c.nom} ${c.prenom}</b><br>
-      📍 ${c.ville}<br>
-      🏠 ${c.adresse}<br><br>
-      ${!c.completed
-        ? `<button onclick="completeClient('${c.id}')">✔ Compléter</button>`
-        : "✅ Terminé"}
-    `);
+    m.on("click",()=>openModal(c));
 
     markers[c.id]=m;
   });
 
   updateStats();
+}
+
+/* MODAL */
+function openModal(c){
+  selectedClientId=c.id;
+
+  document.getElementById("modalContent").innerHTML=`
+    <b>${c.nom} ${c.prenom}</b><br>
+    📍 ${c.ville}<br>
+    🏠 ${c.adresse}<br>
+    📞 ${c.numero}<br>
+    Status: ${c.completed ? "✅ Terminé" : "⏳ En cours"}
+  `;
+
+  document.getElementById("modal").style.display="block";
+}
+
+function closeModal(){
+  document.getElementById("modal").style.display="none";
 }
 
 /* COMPLETE */
@@ -217,7 +255,15 @@ function completeClient(id){
   render();
 }
 
-/* EXPORT CSV */
+/* DELETE */
+function deleteClient(){
+  clients = clients.filter(c=>c.id!==selectedClientId);
+  save();
+  render();
+  closeModal();
+}
+
+/* EXPORT */
 function exportCSV(){
   let csv="Nom,Prénom,Ville,Numéro,Adresse,Status\n";
   clients.forEach(c=>{
@@ -233,7 +279,7 @@ function exportCSV(){
   a.click();
 }
 
-/* GEOCODING SIMPLE */
+/* GEO */
 async function getCoords(ville){
   const res=await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${ville}, Mayotte`);
   const d=await res.json();
@@ -241,6 +287,7 @@ async function getCoords(ville){
   return [-12.8275,45.1662];
 }
 
+/* ADD */
 async function addClient(){
   const c={
     id:Date.now().toString(),
