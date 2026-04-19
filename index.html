@@ -5,8 +5,8 @@
 <title>Carte Mayotte Mobile</title><link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script><style>
 *{box-sizing:border-box;}
-body{margin:0;font-family:Arial;background:#041f17;color:white;overflow:hidden;}
-#app{display:flex;height:100vh;flex-direction:column;}
+html,body{height:100%;margin:0;font-family:Arial;background:#041f17;color:white;overflow:hidden;}
+#app{display:flex;height:100%;flex-direction:column;}
 .header{padding:12px;background:rgba(0,0,0,.45);text-align:center;font-weight:bold;border-bottom:1px solid rgba(255,255,255,.08);}
 #statsBtn{position:absolute;bottom:64px;left:12px;background:#1db954;padding:8px 12px;border-radius:10px;font-weight:bold;z-index:999;box-shadow:0 4px 12px rgba(0,0,0,.25);}
 #filters{position:absolute;top:10px;left:10px;right:10px;display:flex;gap:12px;flex-wrap:wrap;align-items:center;z-index:999;}
@@ -15,13 +15,12 @@ body{margin:0;font-family:Arial;background:#041f17;color:white;overflow:hidden;}
 #searchInput{width:210px;min-height:44px;padding:10px 12px;border:none;border-radius:10px;background:#0b2b22;color:white;outline:none;}
 .toggle-btn{position:absolute;top:72px;right:12px;z-index:999;min-width:125px;min-height:42px;padding:8px 12px;background:#1db954;border:none;color:white;font-weight:bold;border-radius:10px;cursor:pointer;}
 
-.form{position:absolute;top:160px;left:10px;right:10px;padding:10px;background:#06251c;display:none;flex-wrap:wrap;gap:8px;border-radius:12px;z-index:1001;box-shadow:0 10px 25px rgba(0,0,0,.35);opacity:0;transform:translateY(-20px);transition:all .25s ease;pointer-events:none;}
-.form.show{display:flex;opacity:1;transform:translateY(0);pointer-events:auto;}
-
 #overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;display:none;}
 #overlay.show{display:block;}
 
-.form input{flex:1;min-width:45%;min-height:44px;padding:10px;margin-bottom:6px;background:#0b2b22;border:1px solid rgba(255,255,255,.08);color:white;border-radius:10px;outline:none;}
+.form{position:absolute;top:160px;left:10px;right:10px;padding:10px;background:#06251c;display:none;flex-wrap:wrap;gap:8px;border-radius:12px;z-index:1001;box-shadow:0 10px 25px rgba(0,0,0,.35);}
+.form.show{display:flex;}
+.form input{flex:1;min-width:45%;min-height:44px;padding:10px;background:#0b2b22;border:1px solid rgba(255,255,255,.08);color:white;border-radius:10px;outline:none;}
 .form button{width:100%;min-height:46px;padding:11px;background:#1db954;border:none;color:white;font-weight:bold;border-radius:10px;cursor:pointer;}
 .vip-box{display:flex;gap:8px;width:100%;}
 .vip-box button{flex:1;}
@@ -61,10 +60,6 @@ let markers = {};
 let filter = "all";
 let clientType = "BASIC";
 
-const searchInput = document.getElementById("searchInput");
-const form = document.getElementById("form");
-const overlay = document.getElementById("overlay");
-
 function setFilter(f,btn){
 filter=f;
 document.querySelectorAll("#filters button").forEach(b=>b.classList.remove("active"));
@@ -73,13 +68,13 @@ render();
 }
 
 function toggleForm(){
-form.classList.toggle("show");
-overlay.classList.toggle("show");
+document.getElementById("form").classList.add("show");
+document.getElementById("overlay").classList.add("show");
 }
 
 function closeForm(){
-form.classList.remove("show");
-overlay.classList.remove("show");
+document.getElementById("form").classList.remove("show");
+document.getElementById("overlay").classList.remove("show");
 }
 
 function setType(type){
@@ -132,7 +127,7 @@ return [coords[0]+Math.cos(angle)*radius,coords[1]+Math.sin(angle)*radius];
 function render(){
 Object.values(markers).forEach(m=>map.removeLayer(m));
 markers={};
-const search=searchInput.value.toLowerCase();
+const search=document.getElementById("searchInput").value.toLowerCase();
 clients.forEach(c=>{
 if(filter==='done' && !c.completed) return;
 if(filter==='todo' && c.completed) return;
@@ -150,26 +145,27 @@ document.getElementById("statsBtn").innerText="📊 Clients: "+clients.length;
 }
 
 function openPopupClient(c){
-const html=`<b>${c.nom} ${c.prenom}</b><br>📍 ${c.ville}<br>🏘 ${c.quartier||"-"}<br>📞 ${c.numero}<br><a href=tel:${c.numero}><button style='background:#1db954;color:white;margin-top:6px;'>📞 Appeler</button></a><br><br>💰 ${c.prix||"0"}<br>⭐ ${c.type}<br>`;
+const html=`<b>${c.nom} ${c.prenom}</b><br>📍 ${c.ville}<br>🏘 ${c.quartier||"-"}<br>📞 ${c.numero}<br><a href='tel:${c.numero}'><button style='background:#1db954;color:white;margin-top:6px;'>📞 Appeler</button></a><br><br>💰 ${c.prix||"0"}<br>⭐ ${c.type}<br>`;
 markers[c.id].bindPopup(html).openPopup();
 }
 
 function addClient(){
-if(!nom.value.trim()) return;
+if(!document.getElementById("nom").value.trim()) return;
 const c={
 id:Date.now().toString(),
-nom:nom.value.trim(),
-prenom:prenom.value.trim(),
-ville:ville.value.trim(),
-numero:numero.value.trim(),
-quartier:quartier.value.trim(),
-prix:prix.value.trim(),
+nom:document.getElementById("nom").value.trim(),
+prenom:document.getElementById("prenom").value.trim(),
+ville:document.getElementById("ville").value.trim(),
+numero:document.getElementById("numero").value.trim(),
+quartier:document.getElementById("quartier").value.trim(),
+prix:document.getElementById("prix").value.trim(),
 type:clientType,
 completed:false,
 coords:[-12.8275,45.1662]
 };
 clients.push(c);
 localStorage.setItem("clients",JSON.stringify(clients));
+closeForm();
 render();
 }
 
