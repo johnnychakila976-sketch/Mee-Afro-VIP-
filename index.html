@@ -1,15 +1,9 @@
-
-  <!DOCTYPE html>
-<html lang="fr">
+<!DOCTYPE html><html lang="fr">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Carte Mayotte Mobile</title>
-
-<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
-<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-
-<style>
+<title>Carte Mayotte Mobile</title><link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script><style>
 *{box-sizing:border-box;}
 body{margin:0;font-family:Arial;background:#041f17;color:white;overflow:hidden;}
 #app{display:flex;height:100vh;flex-direction:column;}
@@ -30,50 +24,30 @@ body{margin:0;font-family:Arial;background:#041f17;color:white;overflow:hidden;}
 #map{flex:1;}
 .pulse{width:14px;height:14px;border-radius:50%;animation:pulse 1.5s infinite;}
 @keyframes pulse{0%{transform:scale(1);}70%{transform:scale(1.25);}100%{transform:scale(1);}}
-
-.vip-blink{
-  box-shadow: 0 0 12px #ffd700, 0 0 20px #ffd700;
-}
-
-</style>
-</head>
-
-<body>
+.vip-blink{box-shadow:0 0 12px #ffd700, 0 0 20px #ffd700;}
+</style></head><body>
 <div id="app">
-<div id="statsBtn">📊 Clients: 0</div>
-
-<div id="filters">
-<input id="searchInput" placeholder="🔎 Rechercher un client..." oninput="render()">
+<div id="statsBtn">📊 Clients: 0</div><div id="filters">
+<input id="searchInput" placeholder="🔎 Rechercher un client...">
 <button onclick="setFilter('all',this)" class="active">Tout</button>
 <button onclick="setFilter('done',this)">Complétés</button>
 <button onclick="setFilter('todo',this)">Non</button>
 <button onclick="resetAll()">♻ Réinitialiser</button>
 <button onclick="exportCSV()">📤 Export</button>
-</div>
-
-<div class="header">📍 Carte Mayotte Mobile PRO</div>
-<button class="toggle-btn" onclick="toggleForm()">📋 Formulaire</button>
-
-<div class="form" id="form">
+</div><div class="header">📍 Carte Mayotte Mobile PRO</div>
+<button class="toggle-btn" onclick="toggleForm()">📋 Formulaire</button><div class="form" id="form">
 <input id="nom" placeholder="Nom">
 <input id="prenom" placeholder="Prénom">
 <input id="ville" placeholder="Ville">
 <input id="numero" placeholder="Numéro">
 <input id="quartier" placeholder="Quartier">
-<input id="prix" placeholder="Prix">
-
-<div class="vip-box">
+<input id="prix" placeholder="Prix"><div class="vip-box">
 <button type="button" id="basicBtn" onclick="setType('BASIC')" class="vip-active">BASIC</button>
 <button type="button" id="vipBtn" onclick="setType('VIP')">VIP ⭐</button>
-</div>
+</div><button onclick="addClient()">Ajouter client</button>
 
-<button onclick="addClient()">Ajouter client</button>
-</div>
-
-<div id="map"></div>
-</div>
-
-<script>
+</div><div id="map"></div>
+</div><script>
 const map = L.map('map').setView([-12.8275,45.1662],10);
 L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
 
@@ -82,11 +56,48 @@ let markers = {};
 let filter = "all";
 let clientType = "BASIC";
 
+const searchInput = document.getElementById("searchInput");
+const form = document.getElementById("form");
+
 function setFilter(f,btn){
   filter=f;
   document.querySelectorAll("#filters button").forEach(b=>b.classList.remove("active"));
   if(btn) btn.classList.add("active");
   render();
+}
+
+function toggleForm(){
+  form.classList.toggle("show");
+}
+
+function setType(type){
+  clientType = type;
+  document.getElementById("basicBtn").classList.remove("vip-active");
+  document.getElementById("vipBtn").classList.remove("vip-active");
+
+  if(type === "BASIC") document.getElementById("basicBtn").classList.add("vip-active");
+  else document.getElementById("vipBtn").classList.add("vip-active");
+}
+
+function resetAll(){
+  if(confirm("Tout supprimer ?")){
+    clients = [];
+    localStorage.removeItem("clients");
+    render();
+  }
+}
+
+function exportCSV(){
+  let csv = "Nom,Prénom,Ville,Numéro,Quartier,Prix,Type\n";
+  clients.forEach(c=>{
+    csv += `${c.nom},${c.prenom},${c.ville},${c.numero},${c.quartier},${c.prix},${c.type}\n`;
+  });
+
+  const blob = new Blob([csv],{type:"text/csv"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "clients.csv";
+  a.click();
 }
 
 function createIcon(color,type){
@@ -141,7 +152,6 @@ markers[c.id]=marker;
 document.getElementById("statsBtn").innerText="📊 Clients: "+clients.length;
 }
 
-/* ✅ ICI bouton appel ajouté */
 function openPopupClient(c){
 const html=`
 <b>${c.nom} ${c.prenom}</b><br>
@@ -184,6 +194,5 @@ render();
 }
 
 render();
-</script>
-</body>
+</script></body>
 </html>
