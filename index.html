@@ -79,7 +79,7 @@ const map = L.map('map').setView([-12.8275,45.1662],10);
 L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
 
 /* =========================
-   VILLAGES BASE
+   VILLAGES MAYOTTE
 ========================= */
 const villages = [
 { nom:"Mamoudzou", coords:[-12.7808,45.2278] },
@@ -87,7 +87,11 @@ const villages = [
 { nom:"Dzaoudzi", coords:[-12.7833,45.2833] },
 { nom:"Pamandzi", coords:[-12.7897,45.2797] },
 { nom:"Dembeni", coords:[-12.8375,45.1842] },
-{ nom:"Sada", coords:[-12.8500,45.1020] }
+{ nom:"Sada", coords:[-12.8500,45.1020] },
+{ nom:"Chiconi", coords:[-12.8320,45.1060] },
+{ nom:"Tsingoni", coords:[-12.7850,45.1230] },
+{ nom:"Acoua", coords:[-12.7220,45.0580] },
+{ nom:"Bandraboua", coords:[-12.7020,45.1200] }
 ];
 
 /* =========================
@@ -104,29 +108,31 @@ let clusterGroup = L.markerClusterGroup();
 map.addLayer(clusterGroup);
 
 /* =========================
-   DOM
+   NORMALISATION
 ========================= */
-const nomEl=document.getElementById("nom");
-const prenomEl=document.getElementById("prenom");
-const villeEl=document.getElementById("ville");
-const numeroEl=document.getElementById("numero");
-const quartierEl=document.getElementById("quartier");
-const prixEl=document.getElementById("prix");
+function normalize(str){
+return str
+.toLowerCase()
+.normalize("NFD")
+.replace(/[\u0300-\u036f]/g,"")
+.trim();
+}
 
 /* =========================
-   MATCH VILLAGE SIMPLE
+   VILLAGE MATCH EXACT
 ========================= */
 function getCoords(ville){
+
 if(!ville) return [-12.8275,45.1662];
 
-ville = ville.toLowerCase();
+const input = normalize(ville);
 
-let best = villages.find(v =>
-v.nom.toLowerCase().includes(ville) ||
-ville.includes(v.nom.toLowerCase())
-);
+let found = villages.find(v=>{
+const vname = normalize(v.nom);
+return vname === input || vname.includes(input) || input.includes(vname);
+});
 
-return best ? best.coords : [-12.8275,45.1662];
+return found ? found.coords : [-12.8275,45.1662];
 }
 
 /* =========================
@@ -142,29 +148,31 @@ setTimeout(()=>map.invalidateSize(),200);
 ========================= */
 function setType(type){
 clientType=type;
+
 basicBtn.classList.remove("vip-active");
 vipBtn.classList.remove("vip-active");
+
 if(type==="BASIC") basicBtn.classList.add("vip-active");
 else vipBtn.classList.add("vip-active");
 }
 
 /* =========================
-   ADD CLIENT + AUTO ZOOM + POPUP
+   ADD CLIENT
 ========================= */
 function addClient(){
 
-if(!nomEl.value.trim()) return;
+if(!nom.value.trim()) return;
 
-const coords = getCoords(villeEl.value.trim());
+const coords = getCoords(ville.value.trim());
 
 const c={
 id:Date.now().toString(),
-nom:nomEl.value.trim(),
-prenom:prenomEl.value.trim(),
-ville:villeEl.value.trim(),
-numero:numeroEl.value.trim(),
-quartier:quartierEl.value.trim(),
-prix:prixEl.value.trim(),
+nom:nom.value.trim(),
+prenom:prenom.value.trim(),
+ville:ville.value.trim(),
+numero:numero.value.trim(),
+quartier:quartier.value.trim(),
+prix:prix.value.trim(),
 type:clientType,
 completed:false,
 coords:coords
@@ -175,23 +183,12 @@ localStorage.setItem("clients",JSON.stringify(clients));
 
 render();
 
-/* 🎯 ZOOM + OPEN */
+/* 🎯 zoom + popup */
 setTimeout(()=>{
 map.flyTo(c.coords,15,{duration:0.8});
-
-setTimeout(()=>{
-const marker = clusterGroup.getLayers().find(m =>
-m.getLatLng().lat === c.coords[0] &&
-m.getLatLng().lng === c.coords[1]
-);
-
-if(marker) marker.openPopup();
-
-},400);
-
 },200);
 
-nomEl.value=prenomEl.value=villeEl.value=numeroEl.value=quartierEl.value=prixEl.value="";
+nom.value=prenom.value=ville.value=numero.value=quartier.value=prix.value="";
 }
 
 /* =========================
@@ -234,7 +231,7 @@ render();
 }
 
 /* =========================
-   RENDER + CLICK ZOOM
+   RENDER
 ========================= */
 function render(){
 
