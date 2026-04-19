@@ -1,13 +1,163 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Carte Mayotte Mobile</title>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+<style>
+body{
+  margin:0;
+  font-family:Arial;
+  background:#041f17;
+  color:white;
+  overflow:hidden;
+}
+
+#app{display:flex;height:100vh;flex-direction:column;}
+
+.header{
+  padding:10px;
+  background:rgba(0,0,0,0.4);
+  text-align:center;
+  font-weight:bold;
+}
+
+#statsBtn{
+  position:absolute;
+  top:10px;
+  right:10px;
+  background:#1db954;
+  padding:8px 12px;
+  border-radius:8px;
+  font-weight:bold;
+  z-index:999;
+}
+
+#filters{
+  position:absolute;
+  top:10px;
+  left:10px;
+  display:flex;
+  gap:5px;
+  z-index:999;
+  flex-wrap:wrap;
+}
+
+#filters button{
+  padding:6px 10px;
+  border:none;
+  border-radius:6px;
+  background:#0b2b22;
+  color:white;
+}
+
+#filters button.active{
+  background:#1db954;
+}
+
+#searchInput{
+  width:180px;
+  padding:6px 10px;
+  border:none;
+  border-radius:6px;
+  background:#0b2b22;
+  color:white;
+}
+
+.toggle-btn{
+  margin:8px;
+  padding:10px;
+  background:#1db954;
+  border:none;
+  color:white;
+  font-weight:bold;
+  border-radius:8px;
+}
+
+.form{
+  padding:10px;
+  background:rgba(0,0,0,0.3);
+  display:none;
+  flex-wrap:wrap;
+  gap:5px;
+}
+
+.form input{
+  flex:1;
+  min-width:45%;
+  padding:8px;
+  background:#0b2b22;
+  border:none;
+  color:white;
+  border-radius:6px;
+}
+
+.form button{
+  width:100%;
+  padding:10px;
+  background:#1db954;
+  border:none;
+  color:white;
+  font-weight:bold;
+  border-radius:8px;
+}
+
+.vip-box{
+  display:flex;
+  gap:5px;
+  width:100%;
+}
+
+.vip-box button{
+  flex:1;
+}
+
+.vip-active{
+  background:#ffd700 !important;
+  color:black !important;
+}
+
+#map{flex:1;}
+
+.pulse{
+  width:14px;height:14px;
+  border-radius:50%;
+  animation:pulse 1.5s infinite;
+}
+
+@keyframes pulse{
+  0%{transform:scale(1);}
+  70%{transform:scale(1.3);}
+  100%{transform:scale(1);}
+}
+
+#modal{
+  position:fixed;
+  bottom:0;
+  left:0;
+  right:0;
+  background:#0b2b22;
+  padding:15px;
+  display:none;
+  z-index:9999;
+  border-top-left-radius:15px;
+  border-top-right-radius:15px;
+}
+</style>
+</head>
+
+<body>
+
 <div id="app">
 
 <div id="statsBtn">📊 Clients: 0</div>
 
-<!-- 🆕 CLASSEMENT VIP -->
-<div id="vipRanking"></div>
-
-<input id="search" placeholder="🔎 Rechercher un client..." oninput="searchClients()" />
-
 <div id="filters">
+  <input id="searchInput" placeholder="🔎 Rechercher un client..." onkeyup="render()">
   <button onclick="setFilter('all')" class="active">Tout</button>
   <button onclick="setFilter('done')">Complétés</button>
   <button onclick="setFilter('todo')">Non</button>
@@ -19,22 +169,30 @@
 <button class="toggle-btn" onclick="toggleForm()">📋 Formulaire</button>
 
 <div class="form" id="form">
-
   <input id="nom" placeholder="Nom"/>
   <input id="prenom" placeholder="Prénom"/>
   <input id="ville" placeholder="Ville"/>
   <input id="numero" placeholder="Numéro"/>
   <input id="adresse" placeholder="Adresse"/>
+  <input id="quartier" placeholder="Quartier"/>
 
-  <div style="margin:10px 0;">
-    <button type="button" onclick="setType('basic')" id="basicBtn">BASIC</button>
-    <button type="button" onclick="setType('vip')" id="vipBtn">VIP ⭐</button>
+  <div class="vip-box">
+    <button type="button" id="basicBtn" onclick="setType('BASIC')" class="vip-active">BASIC</button>
+    <button type="button" id="vipBtn" onclick="setType('VIP')">VIP ⭐</button>
   </div>
 
   <button onclick="addClient()">Ajouter client</button>
 </div>
 
 <div id="map"></div>
+</div>
+
+<div id="modal">
+  <div id="modalContent"></div>
+  <button onclick="closeModal()">Fermer</button>
+  <button onclick="deleteClient()" style="background:red;color:white;margin-top:10px;">
+    🗑 Supprimer
+  </button>
 </div>
 
 <script>
@@ -45,46 +203,16 @@ L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').add
 let clients = JSON.parse(localStorage.getItem("clients")) || [];
 let markers = {};
 let filter="all";
-let searchQuery="";
-let clientType="basic";
+let selectedClientId=null;
+let clientType="BASIC";
 
-/* TYPE */
-function setType(type){
-  clientType = type;
-}
-
-/* STATS */
 function updateStats(){
-  const total = clients.length;
-  const done = clients.filter(c => c.completed).length;
-  const todo = total - done;
-
-  document.getElementById("statsBtn").innerHTML = `
-    📊 Total: ${total} | ✅ OK: ${done} | ⏳ En cours: ${todo}
-  `;
-}
-
-/* 🆕 VIP RANKING */
-function updateVIPRanking(){
-  const vipClients = clients.filter(c => c.type === "vip");
-
-  const sorted = vipClients.sort((a,b)=>{
-    return (a.completed - b.completed);
-  });
-
-  let html = "⭐ VIP Ranking:<br>";
-
-  sorted.slice(0,5).forEach((c,i)=>{
-    html += `${i+1}. ${c.nom} ${c.prenom} ${c.completed ? "✅" : "⏳"}<br>`;
-  });
-
-  document.getElementById("vipRanking").innerHTML = html;
+  document.getElementById("statsBtn").innerText="📊 Clients: "+clients.length;
 }
 
 function save(){
   localStorage.setItem("clients",JSON.stringify(clients));
   updateStats();
-  updateVIPRanking(); // 🆕 AJOUT UNIQUEMENT
 }
 
 function toggleForm(){
@@ -92,24 +220,24 @@ function toggleForm(){
   f.style.display=f.style.display==="flex"?"none":"flex";
 }
 
-/* ICON */
-function createIcon(type){
-  if(type === "vip"){
-    return L.divIcon({
-      className:"",
-      html:`<div class="pulse vip"></div>`,
-      iconSize:[20,20]
-    });
-  }
+function setType(type){
+  clientType=type;
 
+  basicBtn.classList.remove("vip-active");
+  vipBtn.classList.remove("vip-active");
+
+  if(type==="BASIC") basicBtn.classList.add("vip-active");
+  if(type==="VIP") vipBtn.classList.add("vip-active");
+}
+
+function createIcon(color){
   return L.divIcon({
     className:"",
-    html:`<div class="pulse basic"></div>`,
+    html:`<div class="pulse" style="background:${color}"></div>`,
     iconSize:[20,20]
   });
 }
 
-/* FILTER */
 function setFilter(f){
   filter=f;
   document.querySelectorAll("#filters button").forEach(b=>b.classList.remove("active"));
@@ -117,64 +245,66 @@ function setFilter(f){
   render();
 }
 
-/* SEARCH */
-function searchClients(){
-  searchQuery = document.getElementById("search").value.toLowerCase();
-  render();
-}
-
-/* RENDER */
 function render(){
   Object.values(markers).forEach(m=>map.removeLayer(m));
   markers={};
+
+  const search = document.getElementById("searchInput").value.toLowerCase();
 
   clients.forEach(c=>{
 
     if(filter==="done" && !c.completed) return;
     if(filter==="todo" && c.completed) return;
 
-    const fullName = (c.nom + " " + c.prenom).toLowerCase();
-    if(searchQuery && !fullName.includes(searchQuery)) return;
+    const txt=(c.nom+" "+c.prenom+" "+c.ville).toLowerCase();
+    if(!txt.includes(search)) return;
+
+    const color = c.completed ? "#777" : (c.type==="VIP" ? "#ffd700" : "#00ff88");
 
     const m=L.marker(c.coords,{
-      icon:createIcon(c.type)
+      icon:createIcon(color)
     }).addTo(map);
 
-    m.bindPopup(`
-      <b>${c.nom} ${c.prenom}</b><br>
-      ⭐ Type: ${c.type.toUpperCase()}<br>
-      📍 ${c.ville}<br>
-      🏠 ${c.adresse}<br>
-      📞 ${c.numero}<br>
-      Status: ${c.completed ? "✅ Terminé" : "⏳ En cours"}<br><br>
-
-      ${!c.completed ? `
-        <button onclick="completeClient('${c.id}')">✔ Terminer</button>
-      ` : ""}
-    `);
+    m.on("click",()=>openModal(c));
 
     markers[c.id]=m;
   });
 
   updateStats();
-  updateVIPRanking(); // 🆕 AJOUT
 }
 
-/* COMPLETE */
-function completeClient(id){
-  clients=clients.map(c=>{
-    if(c.id===id) c.completed=true;
-    return c;
-  });
+function openModal(c){
+  selectedClientId=c.id;
+
+  document.getElementById("modalContent").innerHTML=`
+    <b>${c.nom} ${c.prenom}</b><br>
+    📍 ${c.ville}<br>
+    🏘 ${c.quartier || "-"}<br>
+    🏠 ${c.adresse}<br>
+    📞 ${c.numero}<br>
+    ⭐ ${c.type}<br>
+    Status: ${c.completed ? "✅ Terminé" : "⏳ En cours"}
+  `;
+
+  document.getElementById("modal").style.display="block";
+}
+
+function closeModal(){
+  document.getElementById("modal").style.display="none";
+}
+
+function deleteClient(){
+  clients = clients.filter(c=>c.id!==selectedClientId);
   save();
   render();
+  closeModal();
 }
 
-/* EXPORT */
 function exportCSV(){
-  let csv="Nom,Prénom,Ville,Numéro,Adresse,Type,Status\n";
+  let csv="Nom,Prénom,Ville,Numéro,Adresse,Quartier,Type,Status\n";
+
   clients.forEach(c=>{
-    csv+=`${c.nom},${c.prenom},${c.ville},${c.numero},${c.adresse},${c.type},${c.completed?"OK":"NON"}\n`;
+    csv+=`${c.nom},${c.prenom},${c.ville},${c.numero},${c.adresse},${c.quartier},${c.type},${c.completed?"OK":"NON"}\n`;
   });
 
   const blob=new Blob([csv],{type:"text/csv"});
@@ -186,16 +316,17 @@ function exportCSV(){
   a.click();
 }
 
-/* GEO */
 async function getCoords(ville){
   const res=await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${ville}, Mayotte`);
   const d=await res.json();
+
   if(d[0]) return [parseFloat(d[0].lat),parseFloat(d[0].lon)];
+
   return [-12.8275,45.1662];
 }
 
-/* ADD */
 async function addClient(){
+
   const c={
     id:Date.now().toString(),
     nom:nom.value,
@@ -203,43 +334,26 @@ async function addClient(){
     ville:ville.value,
     numero:numero.value,
     adresse:adresse.value,
-    completed:false,
+    quartier:quartier.value,
     type:clientType,
+    completed:false,
     coords:await getCoords(ville.value)
   };
 
   clients.push(c);
+
   save();
   render();
 
   map.flyTo(c.coords,13);
-  document.querySelectorAll("input").forEach(i=>i.value="");
+
+  document.querySelectorAll("input").forEach(i=>{
+    if(i.id!=="searchInput") i.value="";
+  });
 }
 
 render();
 
 </script>
-
-<style>
-.pulse.basic{
-  width:14px;
-  height:14px;
-  border-radius:50%;
-  background:#00ff88;
-  box-shadow:0 0 10px #00ff88;
-}
-
-.pulse.vip{
-  width:16px;
-  height:16px;
-  border-radius:50%;
-  background:gold;
-  box-shadow:0 0 15px gold, 0 0 30px orange;
-  animation: glow 1.5s infinite alternate;
-}
-
-@keyframes glow{
-  from{transform:scale(1);opacity:0.7;}
-  to{transform:scale(1.3);opacity:1;}
-}
-</style>
+</body>
+</html>
