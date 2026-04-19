@@ -53,19 +53,22 @@ body{
   left:10px;
   right:10px;
   display:flex;
-  gap:6px;
+  gap:10px;
   z-index:999;
   flex-wrap:wrap;
+  align-items:center;
 }
 
 #filters button{
-  padding:8px 10px;
+  padding:10px 14px;
+  min-height:44px;
   border:none;
-  border-radius:8px;
+  border-radius:10px;
   background:#0b2b22;
   color:white;
   cursor:pointer;
   transition:0.2s;
+  font-size:15px;
 }
 
 #filters button:hover{
@@ -77,18 +80,20 @@ body{
 }
 
 #searchInput{
-  width:180px;
-  padding:8px 10px;
+  width:200px;
+  min-height:44px;
+  padding:10px 12px;
   border:none;
   outline:none;
-  border-radius:8px;
+  border-radius:10px;
   background:#0b2b22;
   color:white;
 }
 
 .toggle-btn{
-  margin:8px;
-  padding:10px;
+  margin:10px 8px;
+  padding:12px;
+  min-height:46px;
   background:#1db954;
   border:none;
   color:white;
@@ -102,7 +107,7 @@ body{
   background:rgba(0,0,0,0.30);
   display:none;
   flex-wrap:wrap;
-  gap:6px;
+  gap:8px;
   border-top:1px solid rgba(255,255,255,0.05);
   border-bottom:1px solid rgba(255,255,255,0.05);
 }
@@ -110,16 +115,18 @@ body{
 .form input{
   flex:1;
   min-width:45%;
+  min-height:44px;
   padding:10px;
   background:#0b2b22;
   border:1px solid rgba(255,255,255,0.08);
   color:white;
-  border-radius:8px;
+  border-radius:10px;
   outline:none;
 }
 
 .form button{
   width:100%;
+  min-height:46px;
   padding:11px;
   background:#1db954;
   border:none;
@@ -131,7 +138,7 @@ body{
 
 .vip-box{
   display:flex;
-  gap:6px;
+  gap:8px;
   width:100%;
 }
 
@@ -174,9 +181,10 @@ body{
 
 .leaflet-popup-content button{
   border:none;
-  padding:8px 10px;
+  padding:10px 12px;
   border-radius:8px;
   cursor:pointer;
+  min-height:42px;
 }
 </style>
 </head>
@@ -204,7 +212,6 @@ body{
   <input id="prenom" placeholder="Prénom">
   <input id="ville" placeholder="Ville">
   <input id="numero" placeholder="Numéro">
-  <input id="adresse" placeholder="Adresse">
   <input id="quartier" placeholder="Quartier">
   <input id="prix" placeholder="Prix">
 
@@ -327,7 +334,6 @@ function openPopupClient(c){
     <b>${c.nom} ${c.prenom}</b><br>
     📍 ${c.ville}<br>
     🏘 ${c.quartier || "-"}<br>
-    🏠 ${c.adresse}<br>
     📞 ${c.numero}<br>
     💰 ${c.prix || "0"}<br>
     ⭐ ${c.type}<br><br>
@@ -364,10 +370,10 @@ function deleteClient(){
 
 function exportCSV(){
 
-  let csv = "Nom,Prénom,Ville,Numéro,Adresse,Quartier,Prix,Type,Status\n";
+  let csv = "Nom,Prénom,Ville,Numéro,Quartier,Prix,Type,Status\n";
 
   clients.forEach(c=>{
-    csv += `${c.nom},${c.prenom},${c.ville},${c.numero},${c.adresse},${c.quartier},${c.prix},${c.type},${c.completed?"OK":"NON"}\n`;
+    csv += `${c.nom},${c.prenom},${c.ville},${c.numero},${c.quartier},${c.prix},${c.type},${c.completed?"OK":"NON"}\n`;
   });
 
   const blob = new Blob([csv],{type:"text/csv"});
@@ -405,7 +411,6 @@ async function addClient(){
     prenom:prenom.value.trim(),
     ville:ville.value.trim(),
     numero:numero.value.trim(),
-    adresse:adresse.value.trim(),
     quartier:quartier.value.trim(),
     prix:prix.value.trim(),
     type:clientType,
@@ -429,4 +434,4 @@ render();
 
 </script>
 </body>
-</html>
+  </html>
