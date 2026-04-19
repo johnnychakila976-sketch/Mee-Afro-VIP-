@@ -28,8 +28,6 @@ body{margin:0;font-family:Arial;background:#041f17;color:white;overflow:hidden;}
 .vip-active{background:#ffd700 !important;color:black !important;}
 #map{
   flex:1;
-
-  /* effet 3D ajouté */
   transform-style:preserve-3d;
   transition:transform 0.15s ease;
 }
@@ -145,6 +143,17 @@ Object.values(markers).forEach(m=>map.removeLayer(m));
 markers={};
 }
 
+/* ===== NOUVELLE FONCTION CERCLE ===== */
+function offsetCoords(coords, index, total){
+  const radius = 0.00015 + (total * 0.00002);
+  const angle = (index / total) * (2 * Math.PI);
+
+  return [
+    coords[0] + Math.cos(angle) * radius,
+    coords[1] + Math.sin(angle) * radius
+  ];
+}
+
 function render(){
 clearMarkers();
 const search = searchInput.value.trim().toLowerCase();
@@ -158,7 +167,16 @@ if(search && !txt.includes(search)) return;
 
 const color = c.completed ? "#777" : (c.type==="VIP" ? "#ffd700" : "#00ff88");
 
-const marker = L.marker(c.coords,{icon:createIcon(color)}).addTo(map);
+/* ===== MODIF ICI ===== */
+const sameCoords = clients.filter(x =>
+  x.coords[0] === c.coords[0] && x.coords[1] === c.coords[1]
+);
+
+const index = sameCoords.findIndex(x => x.id === c.id);
+const newCoords = offsetCoords(c.coords, index, sameCoords.length);
+
+const marker = L.marker(newCoords,{icon:createIcon(color)}).addTo(map);
+
 marker.on("click",()=>openPopupClient(c));
 markers[c.id]=marker;
 });
