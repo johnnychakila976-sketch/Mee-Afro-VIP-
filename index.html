@@ -46,6 +46,22 @@ color:white;
 cursor:pointer;
 }
 
+.vip-box{
+width:100%;
+display:flex;
+gap:8px;
+}
+
+.vip-box button{
+flex:1;
+padding:10px;
+border:none;
+border-radius:8px;
+background:#444;
+color:white;
+cursor:pointer;
+}
+
 .pulse{
 width:14px;
 height:14px;
@@ -66,10 +82,16 @@ animation:pulse 1.5s infinite;
 <div class="panel">
 <input id="nom" placeholder="Nom">
 <input id="prenom" placeholder="Prénom">
-<input id="ville" placeholder="Village (ex: Acoua)">
+<input id="ville" placeholder="Village">
 <input id="numero" placeholder="Numéro">
 <input id="prix" placeholder="Prix">
-<button onclick="addClient()">Ajouter</button>
+
+<div class="vip-box">
+<button id="basicBtn" onclick="setType('BASIC')" style="background:#1db954;">BASIC</button>
+<button id="vipBtn" onclick="setType('VIP')">VIP ⭐</button>
+</div>
+
+<button onclick="addClient()">Ajouter client</button>
 </div>
 
 <div id="map"></div>
@@ -82,7 +104,7 @@ const map = L.map('map').setView([-12.8275,45.1662],10);
 L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png')
 .addTo(map);
 
-/* ================= BASE VILLAGES ================= */
+/* ================= VILLAGES ================= */
 const villagesBase = {
 "acoua":[-12.7236,45.0419],
 "mamoudzou":[-12.7806,45.2278],
@@ -94,11 +116,27 @@ const villagesBase = {
 
 /* ================= DATA ================= */
 let clients = JSON.parse(localStorage.getItem("clients")) || [];
+let clientType = "BASIC";
 
+/* ================= CLUSTER ================= */
 let clusterGroup = L.markerClusterGroup({
 spiderfyOnMaxZoom:true
 });
 map.addLayer(clusterGroup);
+
+/* ================= TYPE ================= */
+function setType(type){
+clientType = type;
+
+basicBtn.style.background = "#444";
+vipBtn.style.background = "#444";
+
+if(type==="BASIC"){
+basicBtn.style.background = "#1db954";
+}else{
+vipBtn.style.background = "#ffd700";
+}
+}
 
 /* ================= GEO ================= */
 async function getCoords(ville){
@@ -124,20 +162,33 @@ return [parseFloat(data[0].lat), parseFloat(data[0].lon)];
 return [-12.8275,45.1662];
 }
 
-/* ================= ADD ================= */
+/* ================= ADD CLIENT ================= */
 async function addClient(){
+
+/* 🔴 BLOQUAGE FORMULAIRE VIDE */
+if(
+!nom.value.trim() ||
+!prenom.value.trim() ||
+!ville.value.trim() ||
+!numero.value.trim() ||
+!prix.value.trim()
+){
+alert("⚠️ Remplis tous les champs avant d'ajouter un client");
+return;
+}
 
 const coords = await getCoords(ville.value);
 
 const c={
 id:Date.now().toString(),
-nom:nom.value,
-prenom:prenom.value,
-ville:ville.value,
-numero:numero.value,
-prix:prix.value,
+nom:nom.value.trim(),
+prenom:prenom.value.trim(),
+ville:ville.value.trim(),
+numero:numero.value.trim(),
+prix:prix.value.trim(),
 coords:coords,
-completed:false
+completed:false,
+type:clientType
 };
 
 clients.push(c);
@@ -174,7 +225,9 @@ clusterGroup.clearLayers();
 
 clients.forEach(c=>{
 
-const color=c.completed?"#777":"#00ff88";
+const color =
+c.completed ? "#777" :
+c.type==="VIP" ? "#ffd700" : "#00ff88";
 
 const marker=L.marker(c.coords,{
 icon:L.divIcon({
@@ -187,12 +240,17 @@ marker.bindPopup(`
 <b>${c.nom} ${c.prenom}</b><br>
 📍 ${c.ville}<br>
 📞 ${c.numero}<br>
-💰 ${c.prix}<br><br>
+💰 ${c.prix}<br>
+⭐ ${c.type}<br><br>
 
 ${!c.completed ?
-`<button onclick="completeClient('${c.id}')">✔ Valider</button>`:"✔ OK<br><br>"}
+`<button onclick="completeClient('${c.id}')" style="background:#1db954;color:white;width:100%;padding:8px;border:none;margin-bottom:5px;">
+✔ Valider
+</button>`:"✔ OK<br><br>"}
 
-<button onclick="deleteClient('${c.id}')">🗑 Supprimer</button>
+<button onclick="deleteClient('${c.id}')" style="background:red;color:white;width:100%;padding:8px;border:none;">
+🗑 Supprimer
+</button>
 `);
 
 clusterGroup.addLayer(marker);
