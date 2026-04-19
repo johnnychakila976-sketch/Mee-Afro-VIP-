@@ -1,4 +1,5 @@
-<!DOCTYPE html>
+
+  <!DOCTYPE html>
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
@@ -27,6 +28,13 @@ body{margin:0;font-family:Arial;background:#041f17;color:white;overflow:hidden;}
 .vip-box button{flex:1;}
 .vip-active{background:#ffd700 !important;color:black !important;}
 #map{flex:1;}
+.pulse{width:14px;height:14px;border-radius:50%;animation:pulse 1.5s infinite;}
+@keyframes pulse{0%{transform:scale(1);}70%{transform:scale(1.25);}100%{transform:scale(1);}}
+
+.vip-blink{
+  box-shadow: 0 0 12px #ffd700, 0 0 20px #ffd700;
+}
+
 </style>
 </head>
 
@@ -67,58 +75,109 @@ body{margin:0;font-family:Arial;background:#041f17;color:white;overflow:hidden;}
 
 <script>
 const map = L.map('map').setView([-12.8275,45.1662],10);
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
 
 let clients = JSON.parse(localStorage.getItem("clients")) || [];
 let markers = {};
 let filter = "all";
+let clientType = "BASIC";
 
 function setFilter(f,btn){
-  filter = f;
-
-  document.querySelectorAll("#filters button").forEach(b=>{
-    if(!b.onclick) return;
-    b.classList.remove("active");
-  });
-
+  filter=f;
+  document.querySelectorAll("#filters button").forEach(b=>b.classList.remove("active"));
   if(btn) btn.classList.add("active");
-
   render();
+}
+
+function createIcon(color,type){
+return L.divIcon({
+  className:"",
+  html:`<div class="pulse ${type==='VIP'?'vip-blink':''}" style="background:${color}"></div>`,
+  iconSize:[20,20]
+});
+}
+
+function offsetCoords(coords,index,total){
+  const zoom = map.getZoom();
+  const base = 0.0002;
+  const scale = Math.pow(2,(14-zoom));
+
+  const radius = (base*scale*4)+(total*base*scale*2);
+  const angle = (index/total)*(2*Math.PI);
+
+  return [
+    coords[0]+Math.cos(angle)*radius,
+    coords[1]+Math.sin(angle)*radius
+  ];
 }
 
 function render(){
 Object.values(markers).forEach(m=>map.removeLayer(m));
 markers={};
 
-const search = document.getElementById("searchInput").value.toLowerCase();
+const search = searchInput.value.toLowerCase();
 
 clients.forEach(c=>{
 
-if(filter === "done"){
-  if(c.completed !== true) return;
-}
-
-if(filter === "todo"){
-  if(c.completed === true) return;
-}
+if(filter==="done" && c.completed!==true) return;
+if(filter==="todo" && c.completed===true) return;
 
 const txt=(c.nom+" "+c.prenom+" "+c.ville).toLowerCase();
 if(search && !txt.includes(search)) return;
 
-const marker = L.marker(c.coords).addTo(map);
+const color = c.completed ? "#777" : (c.type==="VIP" ? "#ffd700" : "#00ff88");
+
+const same = clients.filter(x=>x.coords[0]===c.coords[0] && x.coords[1]===c.coords[1]);
+const index = same.findIndex(x=>x.id===c.id);
+
+const newCoords = offsetCoords(c.coords,index,same.length);
+
+const marker = L.marker(newCoords,{icon:createIcon(color,c.type)}).addTo(map);
+marker.on("click",()=>openPopupClient(c));
 markers[c.id]=marker;
+
 });
+
+document.getElementById("statsBtn").innerText="📊 Clients: "+clients.length;
+}
+
+/* ✅ ICI bouton appel ajouté */
+function openPopupClient(c){
+const html=`
+<b>${c.nom} ${c.prenom}</b><br>
+📍 ${c.ville}<br>
+🏘 ${c.quartier || "-"}<br>
+📞 ${c.numero}<br>
+
+<a href="tel:${c.numero}">
+  <button style="background:#1db954;color:white;margin-top:6px;">
+    📞 Appeler
+  </button>
+</a><br><br>
+
+💰 ${c.prix || "0"}<br>
+⭐ ${c.type}<br>
+`;
+
+markers[c.id].bindPopup(html).openPopup();
 }
 
 function addClient(){
+if(!nom.value.trim()) return;
+
 const c={
 id:Date.now().toString(),
-nom:nom.value,
-prenom:prenom.value,
-ville:ville.value,
-coords:[-12.8,45.1],
-completed:false
+nom:nom.value.trim(),
+prenom:prenom.value.trim(),
+ville:ville.value.trim(),
+numero:numero.value.trim(),
+quartier:quartier.value.trim(),
+prix:prix.value.trim(),
+type:clientType,
+completed:false,
+coords:[-12.8275,45.1662]
 };
+
 clients.push(c);
 localStorage.setItem("clients",JSON.stringify(clients));
 render();
