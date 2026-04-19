@@ -181,8 +181,23 @@ const html=`
 markers[c.id].bindPopup(html).openPopup();
 }
 
-function addClient(){
+async function addClient(){
 if(!nom.value.trim()) return;
+
+let lat = -12.8275;
+let lon = 45.1662;
+
+try{
+const q = encodeURIComponent(ville.value.trim());
+const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${q}`);
+const data = await res.json();
+if(data && data.length>0){
+lat = parseFloat(data[0].lat);
+lon = parseFloat(data[0].lon);
+}
+}catch(e){
+console.log("geo error",e);
+}
 
 const c={
 id:Date.now().toString(),
@@ -194,7 +209,12 @@ quartier:quartier.value.trim(),
 prix:prix.value.trim(),
 type:clientType,
 completed:false,
-coords:[-12.8275,45.1662]
+coords:[lat,lon]
+};
+
+clients.push(c);
+localStorage.setItem("clients",JSON.stringify(clients));
+render();
 };
 
 clients.push(c);
