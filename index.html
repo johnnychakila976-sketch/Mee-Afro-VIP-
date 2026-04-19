@@ -1,171 +1,268 @@
-<!DOCTYPE html><html lang="fr">
+<!DOCTYPE html>
+<html lang="fr">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Carte Mayotte Mobile</title>  <!-- Leaflet -->  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>  <style>
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      background: #041f17;
-      color: white;
-      overflow: hidden;
-    }
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Carte Mayotte Mobile</title>
 
-    #app {
-      display: flex;
-      height: 100vh;
-      flex-direction: column;
-    }
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
-    /* HEADER MOBILE */
-    .header {
-      padding: 10px;
-      background: rgba(0,0,0,0.4);
-      backdrop-filter: blur(10px);
-      text-align: center;
-      font-weight: bold;
-    }
+<style>
+body{
+  margin:0;
+  font-family:Arial;
+  background:#041f17;
+  color:white;
+  overflow:hidden;
+}
 
-    /* FORM MOBILE */
-    .form {
-      padding: 10px;
-      background: rgba(0,0,0,0.3);
-      display: flex;
-      flex-wrap: wrap;
-      gap: 5px;
-    }
+#app{display:flex;height:100vh;flex-direction:column;}
 
-    .form input {
-      flex: 1;
-      min-width: 45%;
-      padding: 8px;
-      background: #0b2b22;
-      border: none;
-      color: white;
-      border-radius: 6px;
-    }
+.header{
+  padding:10px;
+  background:rgba(0,0,0,0.4);
+  text-align:center;
+  font-weight:bold;
+}
 
-    .form button {
-      width: 100%;
-      padding: 10px;
-      background: #1db954;
-      border: none;
-      color: white;
-      font-weight: bold;
-      border-radius: 8px;
-    }
+#statsBtn{
+  position:absolute;
+  top:10px;
+  right:10px;
+  background:#1db954;
+  padding:8px 12px;
+  border-radius:8px;
+  font-weight:bold;
+  z-index:999;
+}
 
-    /* MAP */
-    #map {
-      flex: 1;
-    }
+/* FILTER BAR */
+#filters{
+  position:absolute;
+  top:10px;
+  left:10px;
+  display:flex;
+  gap:5px;
+  z-index:999;
+}
 
-    /* PULSE EFFECT */
-    .pulse {
-      width: 14px;
-      height: 14px;
-      background: #00ff88;
-      border-radius: 50%;
-      box-shadow: 0 0 0 rgba(0,255,136,0.7);
-      animation: pulse 1.5s infinite;
-    }
+#filters button{
+  padding:6px 10px;
+  border:none;
+  border-radius:6px;
+  background:#0b2b22;
+  color:white;
+}
 
-    @keyframes pulse {
-      0% {
-        transform: scale(1);
-        box-shadow: 0 0 0 0 rgba(0,255,136,0.7);
-      }
-      70% {
-        transform: scale(1.3);
-        box-shadow: 0 0 0 15px rgba(0,255,136,0);
-      }
-      100% {
-        transform: scale(1);
-        box-shadow: 0 0 0 0 rgba(0,255,136,0);
-      }
-    }
+#filters button.active{
+  background:#1db954;
+}
 
-    .pulse-blue {
-      background: #3aa0ff;
-      box-shadow: 0 0 0 rgba(58,160,255,0.7);
-      animation: pulse 1.5s infinite;
-    }
-  </style></head>
-<body><div id="app">  <div class="header">📍 Carte Mayotte Mobile PRO</div>  <div class="form">
-    <input id="nom" placeholder="Nom" />
-    <input id="prenom" placeholder="Prénom" />
-    <input id="ville" placeholder="Ville (Mamoudzou, Koungou...)" />
-    <input id="numero" placeholder="Numéro" />
-    <input id="adresse" placeholder="Adresse" />
-    <input id="code" placeholder="Code secret" />
-    <button onclick="addClient()">Ajouter client</button>
-  </div>  <div id="map"></div></div><script>
+.toggle-btn{
+  margin:8px;
+  padding:10px;
+  background:#1db954;
+  border:none;
+  color:white;
+  font-weight:bold;
+  border-radius:8px;
+}
 
-const map = L.map('map').setView([-12.8275, 45.1662], 10);
+.form{
+  padding:10px;
+  background:rgba(0,0,0,0.3);
+  display:none;
+  flex-wrap:wrap;
+  gap:5px;
+}
 
-// Zoom automatique style "fly"
-setTimeout(() => {
-  map.flyTo([-12.8275, 45.1662], 11, {
-    animate: true,
-    duration: 2
-  });
-}, 1000);
+.form input{
+  flex:1;
+  min-width:45%;
+  padding:8px;
+  background:#0b2b22;
+  border:none;
+  color:white;
+  border-radius:6px;
+}
 
-L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-  attribution: ''
-}).addTo(map);
+.form button{
+  width:100%;
+  padding:10px;
+  background:#1db954;
+  border:none;
+  color:white;
+  font-weight:bold;
+  border-radius:8px;
+}
 
-const cityCoords = {
-  Mamoudzou: [-12.7806, 45.2278],
-  Koungou: [-12.735, 45.205],
-  Dzaoudzi: [-12.783, 45.281],
-  Sada: [-12.851, 45.107]
-};
+#map{flex:1;}
 
-let clients = [];
+.pulse{
+  width:14px;height:14px;
+  background:#00ff88;
+  border-radius:50%;
+  animation:pulse 1.5s infinite;
+}
 
-function createPulseIcon(color) {
+@keyframes pulse{
+  0%{transform:scale(1);}
+  70%{transform:scale(1.3);}
+  100%{transform:scale(1);}
+}
+</style>
+</head>
+
+<body>
+
+<div id="app">
+
+<div id="statsBtn">📊 Clients: 0</div>
+
+<div id="filters">
+  <button onclick="setFilter('all')" class="active">Tout</button>
+  <button onclick="setFilter('done')">Complétés</button>
+  <button onclick="setFilter('todo')">Non</button>
+  <button onclick="exportCSV()">📤 Export</button>
+</div>
+
+<div class="header">📍 Carte Mayotte Mobile PRO</div>
+
+<button class="toggle-btn" onclick="toggleForm()">📋 Formulaire</button>
+
+<div class="form" id="form">
+  <input id="nom" placeholder="Nom"/>
+  <input id="prenom" placeholder="Prénom"/>
+  <input id="ville" placeholder="Ville"/>
+  <input id="numero" placeholder="Numéro"/>
+  <input id="adresse" placeholder="Adresse"/>
+  <button onclick="addClient()">Ajouter client</button>
+</div>
+
+<div id="map"></div>
+</div>
+
+<script>
+
+const map = L.map('map').setView([-12.8275,45.1662],10);
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
+
+let clients = JSON.parse(localStorage.getItem("clients")) || [];
+let markers = {};
+let filter="all";
+
+function updateStats(){
+  document.getElementById("statsBtn").innerText="📊 Clients: "+clients.length;
+}
+
+function save(){
+  localStorage.setItem("clients",JSON.stringify(clients));
+  updateStats();
+}
+
+function toggleForm(){
+  const f=document.getElementById("form");
+  f.style.display=f.style.display==="flex"?"none":"flex";
+}
+
+function createIcon(){
   return L.divIcon({
-    className: '',
-    html: `<div class="pulse ${color}"></div>`,
-    iconSize: [20,20]
+    className:"",
+    html:`<div class="pulse"></div>`,
+    iconSize:[20,20]
   });
 }
 
-function addClient() {
-  const nom = document.getElementById('nom').value;
-  const prenom = document.getElementById('prenom').value;
-  const ville = document.getElementById('ville').value;
-  const numero = document.getElementById('numero').value;
-  const adresse = document.getElementById('adresse').value;
-  const code = document.getElementById('code').value;
-
-  const coords = cityCoords[ville] || [-12.8275, 45.1662];
-
-  const type = Math.random() > 0.5 ? 'pulse' : 'pulse-blue';
-
-  const marker = L.marker(coords, {
-    icon: createPulseIcon(type)
-  }).addTo(map);
-
-  marker.bindPopup(
-    `<b>${nom} ${prenom}</b><br>
-     📍 ${ville}<br>
-     🏠 ${adresse}<br>
-     📞 ${numero}`
-  );
-
-  clients.push(marker);
-
-  // Zoom automatique sur nouveau client
-  map.flyTo(coords, 13, {
-    animate: true,
-    duration: 1.5
-  });
-
-  document.querySelectorAll('input').forEach(i => i.value = '');
+/* FILTER */
+function setFilter(f){
+  filter=f;
+  document.querySelectorAll("#filters button").forEach(b=>b.classList.remove("active"));
+  event.target.classList.add("active");
+  render();
 }
 
-</script></body>
-  </html>
+function render(){
+  Object.values(markers).forEach(m=>map.removeLayer(m));
+  markers={};
+
+  clients.forEach(c=>{
+    if(filter==="done" && !c.completed) return;
+    if(filter==="todo" && c.completed) return;
+
+    const m=L.marker(c.coords,{icon:createIcon()}).addTo(map);
+
+    m.bindPopup(`
+      <b>${c.nom} ${c.prenom}</b><br>
+      📍 ${c.ville}<br>
+      🏠 ${c.adresse}<br><br>
+      ${!c.completed
+        ? `<button onclick="completeClient('${c.id}')">✔ Compléter</button>`
+        : "✅ Terminé"}
+    `);
+
+    markers[c.id]=m;
+  });
+
+  updateStats();
+}
+
+/* COMPLETE */
+function completeClient(id){
+  clients=clients.map(c=>{
+    if(c.id===id) c.completed=true;
+    return c;
+  });
+  save();
+  render();
+}
+
+/* EXPORT CSV */
+function exportCSV(){
+  let csv="Nom,Prénom,Ville,Numéro,Adresse,Status\n";
+  clients.forEach(c=>{
+    csv+=`${c.nom},${c.prenom},${c.ville},${c.numero},${c.adresse},${c.completed?"OK":"NON"}\n`;
+  });
+
+  const blob=new Blob([csv],{type:"text/csv"});
+  const url=URL.createObjectURL(blob);
+
+  const a=document.createElement("a");
+  a.href=url;
+  a.download="clients.csv";
+  a.click();
+}
+
+/* GEOCODING SIMPLE */
+async function getCoords(ville){
+  const res=await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${ville}, Mayotte`);
+  const d=await res.json();
+  if(d[0]) return [parseFloat(d[0].lat),parseFloat(d[0].lon)];
+  return [-12.8275,45.1662];
+}
+
+async function addClient(){
+  const c={
+    id:Date.now().toString(),
+    nom:nom.value,
+    prenom:prenom.value,
+    ville:ville.value,
+    numero:numero.value,
+    adresse:adresse.value,
+    completed:false,
+    coords:await getCoords(ville.value)
+  };
+
+  clients.push(c);
+  save();
+  render();
+
+  map.flyTo(c.coords,13);
+  document.querySelectorAll("input").forEach(i=>i.value="");
+}
+
+render();
+
+</script>
+</body>
+</html>
