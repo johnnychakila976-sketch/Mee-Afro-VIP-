@@ -14,10 +14,13 @@ body{margin:0;font-family:Arial;background:#041f17;color:white;overflow:hidden;}
 #filters button.active{background:#1db954;}
 #searchInput{width:210px;min-height:44px;padding:10px 12px;border:none;border-radius:10px;background:#0b2b22;color:white;outline:none;}
 .toggle-btn{position:absolute;top:72px;right:12px;z-index:999;min-width:125px;min-height:42px;padding:8px 12px;background:#1db954;border:none;color:white;font-weight:bold;border-radius:10px;cursor:pointer;}
+
 .form{position:absolute;top:160px;left:10px;right:10px;padding:10px;background:#06251c;display:none;flex-wrap:wrap;gap:8px;border-radius:12px;z-index:1001;box-shadow:0 10px 25px rgba(0,0,0,.35);opacity:0;transform:translateY(-20px);transition:all .25s ease;pointer-events:none;}
 .form.show{display:flex;opacity:1;transform:translateY(0);pointer-events:auto;}
+
 #overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;display:none;}
 #overlay.show{display:block;}
+
 .form input{flex:1;min-width:45%;min-height:44px;padding:10px;margin-bottom:6px;background:#0b2b22;border:1px solid rgba(255,255,255,.08);color:white;border-radius:10px;outline:none;}
 .form button{width:100%;min-height:46px;padding:11px;background:#1db954;border:none;color:white;font-weight:bold;border-radius:10px;cursor:pointer;}
 .vip-box{display:flex;gap:8px;width:100%;}
@@ -30,15 +33,14 @@ body{margin:0;font-family:Arial;background:#041f17;color:white;overflow:hidden;}
 </style></head><body>
 <div id="app">
 <div id="statsBtn">📊 Clients: 0</div><div id="filters">
-<input id="searchInput" placeholder="🔎 Rechercher un client...">
+<input id="searchInput" placeholder="🔎 Rechercher un client..." oninput="render()">
 <button onclick="setFilter('all',this)" class="active">Tout</button>
 <button onclick="setFilter('done',this)">Complétés</button>
 <button onclick="setFilter('todo',this)">Non</button>
 <button onclick="resetAll()">♻ Réinitialiser</button>
 <button onclick="exportCSV()">📤 Export</button>
 </div><div class="header">📍 Carte Mayotte Mobile PRO</div>
-<button class="toggle-btn" onclick="toggleForm()">📋 Formulaire</button><div id="overlay" onclick="closeForm()"></div>
-<div class="form" id="form">
+<button class="toggle-btn" onclick="toggleForm()">📋 Formulaire</button><div id="overlay" onclick="closeForm()"></div><div class="form" id="form">
 <input id="nom" placeholder="Nom">
 <input id="prenom" placeholder="Prénom">
 <input id="ville" placeholder="Ville">
@@ -61,144 +63,99 @@ let clientType = "BASIC";
 
 const searchInput = document.getElementById("searchInput");
 const form = document.getElementById("form");
+const overlay = document.getElementById("overlay");
 
 function setFilter(f,btn){
-  filter=f;
-  document.querySelectorAll("#filters button").forEach(b=>b.classList.remove("active"));
-  if(btn) btn.classList.add("active");
-  render();
+filter=f;
+document.querySelectorAll("#filters button").forEach(b=>b.classList.remove("active"));
+if(btn) btn.classList.add("active");
+render();
 }
 
 function toggleForm(){
-  form.classList.toggle("show");
-  document.getElementById("overlay").classList.toggle("show");
+form.classList.toggle("show");
+overlay.classList.toggle("show");
 }
 
 function closeForm(){
-  form.classList.remove("show");
-  document.getElementById("overlay").classList.remove("show");
+form.classList.remove("show");
+overlay.classList.remove("show");
 }
 
 function setType(type){
-  clientType = type;
-  document.getElementById("basicBtn").classList.remove("vip-active");
-  document.getElementById("vipBtn").classList.remove("vip-active");
-
-  if(type === "BASIC") document.getElementById("basicBtn").classList.add("vip-active");
-  else document.getElementById("vipBtn").classList.add("vip-active");
+clientType=type;
+document.getElementById("basicBtn").classList.remove("vip-active");
+document.getElementById("vipBtn").classList.remove("vip-active");
+if(type==="BASIC") document.getElementById("basicBtn").classList.add("vip-active");
+else document.getElementById("vipBtn").classList.add("vip-active");
 }
 
 function resetAll(){
-  if(confirm("Tout supprimer ?")){
-    clients = [];
-    localStorage.removeItem("clients");
-    render();
-  }
+if(confirm("Tout supprimer ?")){
+clients=[];
+localStorage.removeItem("clients");
+render();
+}
 }
 
 function exportCSV(){
-  let csv = "Nom,Prénom,Ville,Numéro,Quartier,Prix,Type\n";
-  clients.forEach(c=>{
-    csv += `${c.nom},${c.prenom},${c.ville},${c.numero},${c.quartier},${c.prix},${c.type}\n`;
-  });
-
-  const blob = new Blob([csv],{type:"text/csv"});
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = "clients.csv";
-  a.click();
+let csv="Nom,Prénom,Ville,Numéro,Quartier,Prix,Type
+";
+clients.forEach(c=>{
+csv+=`${c.nom},${c.prenom},${c.ville},${c.numero},${c.quartier},${c.prix},${c.type}
+`;
+});
+const blob=new Blob([csv],{type:"text/csv"});
+const a=document.createElement("a");
+a.href=URL.createObjectURL(blob);
+a.download="clients.csv";
+a.click();
 }
 
 function createIcon(color,type){
 return L.divIcon({
-  className:"",
-  html:`<div class="pulse ${type==='VIP'?'vip-blink':''}" style="background:${color}"></div>`,
-  iconSize:[20,20]
+className:"",
+html:`<div class="pulse ${type==='VIP'?'vip-blink':''}" style="background:${color}"></div>`,
+iconSize:[20,20]
 });
 }
 
 function offsetCoords(coords,index,total){
-  const zoom = map.getZoom();
-  const base = 0.0002;
-  const scale = Math.pow(2,(14-zoom));
-
-  const radius = (base*scale*4)+(total*base*scale*2);
-  const angle = (index/total)*(2*Math.PI);
-
-  return [
-    coords[0]+Math.cos(angle)*radius,
-    coords[1]+Math.sin(angle)*radius
-  ];
+const zoom=map.getZoom();
+const base=0.0002;
+const scale=Math.pow(2,(14-zoom));
+const radius=(base*scale*4)+(total*base*scale*2);
+const angle=(index/total)*(2*Math.PI);
+return [coords[0]+Math.cos(angle)*radius,coords[1]+Math.sin(angle)*radius];
 }
 
 function render(){
 Object.values(markers).forEach(m=>map.removeLayer(m));
 markers={};
-
-const search = searchInput.value.toLowerCase();
-
+const search=searchInput.value.toLowerCase();
 clients.forEach(c=>{
-
-if(filter==="done" && c.completed!==true) return;
-if(filter==="todo" && c.completed===true) return;
-
+if(filter==='done' && !c.completed) return;
+if(filter==='todo' && c.completed) return;
 const txt=(c.nom+" "+c.prenom+" "+c.ville).toLowerCase();
 if(search && !txt.includes(search)) return;
-
-const color = c.completed ? "#777" : (c.type==="VIP" ? "#ffd700" : "#00ff88");
-
-const same = clients.filter(x=>x.coords[0]===c.coords[0] && x.coords[1]===c.coords[1]);
-const index = same.findIndex(x=>x.id===c.id);
-
-const newCoords = offsetCoords(c.coords,index,same.length);
-
-const marker = L.marker(newCoords,{icon:createIcon(color,c.type)}).addTo(map);
+const color=c.completed?'#777':(c.type==='VIP'?'#ffd700':'#00ff88');
+const same=clients.filter(x=>x.coords[0]===c.coords[0] && x.coords[1]===c.coords[1]);
+const index=same.findIndex(x=>x.id===c.id);
+const newCoords=offsetCoords(c.coords,index,same.length);
+const marker=L.marker(newCoords,{icon:createIcon(color,c.type)}).addTo(map);
 marker.on("click",()=>openPopupClient(c));
 markers[c.id]=marker;
-
 });
-
 document.getElementById("statsBtn").innerText="📊 Clients: "+clients.length;
 }
 
 function openPopupClient(c){
-const html=`
-<b>${c.nom} ${c.prenom}</b><br>
-📍 ${c.ville}<br>
-🏘 ${c.quartier || "-"}<br>
-📞 ${c.numero}<br>
-
-<a href="tel:${c.numero}">
-  <button style="background:#1db954;color:white;margin-top:6px;">
-    📞 Appeler
-  </button>
-</a><br><br>
-
-💰 ${c.prix || "0"}<br>
-⭐ ${c.type}<br>
-`;
-
+const html=`<b>${c.nom} ${c.prenom}</b><br>📍 ${c.ville}<br>🏘 ${c.quartier||"-"}<br>📞 ${c.numero}<br><a href=tel:${c.numero}><button style='background:#1db954;color:white;margin-top:6px;'>📞 Appeler</button></a><br><br>💰 ${c.prix||"0"}<br>⭐ ${c.type}<br>`;
 markers[c.id].bindPopup(html).openPopup();
 }
 
-async function addClient(){
+function addClient(){
 if(!nom.value.trim()) return;
-
-let lat = -12.8275;
-let lon = 45.1662;
-
-try{
-const q = encodeURIComponent(ville.value.trim());
-const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${q}`);
-const data = await res.json();
-if(data && data.length>0){
-lat = parseFloat(data[0].lat);
-lon = parseFloat(data[0].lon);
-}
-}catch(e){
-console.log("geo error",e);
-}
-
 const c={
 id:Date.now().toString(),
 nom:nom.value.trim(),
@@ -209,14 +166,8 @@ quartier:quartier.value.trim(),
 prix:prix.value.trim(),
 type:clientType,
 completed:false,
-coords:[lat,lon]
+coords:[-12.8275,45.1662]
 };
-
-clients.push(c);
-localStorage.setItem("clients",JSON.stringify(clients));
-render();
-};
-
 clients.push(c);
 localStorage.setItem("clients",JSON.stringify(clients));
 render();
