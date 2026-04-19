@@ -82,21 +82,63 @@ let clients = JSON.parse(localStorage.getItem("clients")) || [];
 let markers = {};
 let filter = "all";
 
-/* ✅ FIX IMPORTANT : référence input */
-const searchInput = document.getElementById("searchInput");
+/* =========================
+   RESET FIX
+========================= */
+function resetAll(){
+  clients = [];
+  markers = {};
+  localStorage.removeItem("clients");
+  render();
+}
 
-/* ✅ FIX boutons filtre */
+/* =========================
+   EXPORT FIX
+========================= */
+function exportCSV(){
+let csv="Nom,Prénom,Ville,Numéro,Quartier,Prix,Type,Status\n";
+
+clients.forEach(c=>{
+csv += `${c.nom || ""},${c.prenom || ""},${c.ville || ""},${c.numero || ""},${c.quartier || ""},${c.prix || ""},${c.type || ""},${c.completed ? "OK" : "NON"}\n`;
+});
+
+const blob = new Blob([csv],{type:"text/csv"});
+const url = URL.createObjectURL(blob);
+
+const a = document.createElement("a");
+a.href = url;
+a.download = "clients.csv";
+document.body.appendChild(a);
+a.click();
+a.remove();
+
+URL.revokeObjectURL(url);
+}
+
+/* =========================
+   FORM FIX
+========================= */
+function toggleForm(){
+const form = document.getElementById("form");
+
+if(form.classList.contains("show")){
+  form.classList.remove("show");
+  setTimeout(()=>form.style.display="none",200);
+}else{
+  form.style.display="flex";
+  setTimeout(()=>form.classList.add("show"),10);
+}
+
+setTimeout(()=>map.invalidateSize(),300);
+}
+
+/* =========================
+   FILTER
+========================= */
 function setFilter(f,btn){
-  filter = f;
-
-  document.querySelectorAll("#filters button").forEach(b=>{
-    if(b.innerText !== "♻ Réinitialiser" && b.innerText !== "📤 Export"){
-      b.classList.remove("active");
-    }
-  });
-
+  filter=f;
+  document.querySelectorAll("#filters button").forEach(b=>b.classList.remove("active"));
   if(btn) btn.classList.add("active");
-
   render();
 }
 
@@ -109,22 +151,7 @@ return L.divIcon({
 });
 }
 
-/* ESPACEMENT */
-function offsetCoords(coords,index,total){
-  const zoom = map.getZoom();
-  const base = 0.0002;
-  const scale = Math.pow(2,(14-zoom));
-
-  const radius = (base*scale*4)+(total*base*scale*2);
-  const angle = (index/total)*(2*Math.PI);
-
-  return [
-    coords[0]+Math.cos(angle)*radius,
-    coords[1]+Math.sin(angle)*radius
-  ];
-}
-
-/* ✅ FIX FILTER LOGIC */
+/* RENDER */
 function render(){
 Object.values(markers).forEach(m=>map.removeLayer(m));
 markers={};
@@ -136,43 +163,17 @@ clients.forEach(c=>{
 if(filter==="done" && c.completed!==true) return;
 if(filter==="todo" && c.completed===true) return;
 
-const txt=(c.nom+" "+c.prenom+" "+c.ville+" "+(c.quartier||"")).toLowerCase();
+const txt=(c.nom+" "+c.prenom+" "+c.ville).toLowerCase();
 if(search && !txt.includes(search)) return;
 
 const color = c.completed ? "#777" : (c.type==="VIP" ? "#ffd700" : "#00ff88");
 
-const same = clients.filter(x=>x.coords[0]===c.coords[0] && x.coords[1]===c.coords[1]);
-const index = same.findIndex(x=>x.id===c.id);
-
-const newCoords = offsetCoords(c.coords,index,same.length);
-
-const marker = L.marker(newCoords,{icon:createIcon(color,c.type)}).addTo(map);
+const marker = L.marker(c.coords,{icon:createIcon(color,c.type)}).addTo(map);
 markers[c.id]=marker;
 
 });
 
 document.getElementById("statsBtn").innerText="📊 Clients: "+clients.length;
-}
-
-function addClient(){
-if(!nom.value.trim()) return;
-
-const c={
-id:Date.now().toString(),
-nom:nom.value.trim(),
-prenom:prenom.value.trim(),
-ville:ville.value.trim(),
-numero:numero.value.trim(),
-quartier:quartier.value.trim(),
-prix:prix.value.trim(),
-type:"BASIC",
-completed:false,
-coords:[-12.8275,45.1662]
-};
-
-clients.push(c);
-localStorage.setItem("clients",JSON.stringify(clients));
-render();
 }
 
 render();
