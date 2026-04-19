@@ -7,7 +7,6 @@
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
 
-<!-- CLUSTER -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.css">
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.Default.css">
 
@@ -18,7 +17,7 @@
 *{box-sizing:border-box;}
 body{margin:0;font-family:Arial;background:#041f17;color:white;overflow:hidden;}
 #app{display:flex;height:100vh;flex-direction:column;}
-.header{padding:12px;background:rgba(0,0,0,.45);text-align:center;font-weight:bold;border-bottom:1px solid rgba(255,255,255,.08);}
+.header{padding:12px;background:rgba(0,0,0,.45);text-align:center;font-weight:bold;}
 #statsBtn{position:absolute;bottom:64px;left:12px;background:#1db954;padding:8px 12px;border-radius:10px;font-weight:bold;z-index:999;}
 #filters{position:absolute;top:10px;left:10px;right:10px;display:flex;gap:12px;flex-wrap:wrap;z-index:999;}
 #filters button{padding:10px 14px;border:none;border-radius:10px;background:#0b2b22;color:white;cursor:pointer;}
@@ -80,7 +79,7 @@ const map = L.map('map').setView([-12.8275,45.1662],10);
 L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
 
 /* =========================
-   BASE VILLAGES MAYOTTE
+   VILLAGES BASE
 ========================= */
 const villages = [
 { nom:"Mamoudzou", coords:[-12.7808,45.2278] },
@@ -88,17 +87,7 @@ const villages = [
 { nom:"Dzaoudzi", coords:[-12.7833,45.2833] },
 { nom:"Pamandzi", coords:[-12.7897,45.2797] },
 { nom:"Dembeni", coords:[-12.8375,45.1842] },
-{ nom:"Sada", coords:[-12.8500,45.1020] },
-{ nom:"Chiconi", coords:[-12.8320,45.1060] },
-{ nom:"Tsingoni", coords:[-12.7850,45.1230] },
-{ nom:"Ouangani", coords:[-12.8450,45.1380] },
-{ nom:"Bandraboua", coords:[-12.7020,45.1200] },
-{ nom:"Acoua", coords:[-12.7220,45.0580] },
-{ nom:"Mtsamboro", coords:[-12.6870,45.0670] },
-{ nom:"Bouéni", coords:[-12.9130,45.1520] },
-{ nom:"Bandrélé", coords:[-12.9100,45.1920] },
-{ nom:"Chirongui", coords:[-12.9350,45.1480] },
-{ nom:"Kani-Kéli", coords:[-12.9560,45.1230] }
+{ nom:"Sada", coords:[-12.8500,45.1020] }
 ];
 
 /* =========================
@@ -125,38 +114,19 @@ const quartierEl=document.getElementById("quartier");
 const prixEl=document.getElementById("prix");
 
 /* =========================
-   SIMILARITY (FUZZY MATCH)
-========================= */
-function similarity(a,b){
-a=a.toLowerCase();
-b=b.toLowerCase();
-let score=0;
-for(let i=0;i<Math.min(a.length,b.length);i++){
-if(a[i]===b[i]) score++;
-}
-return score;
-}
-
-/* =========================
-   GET COORDS LOCAL
+   MATCH VILLAGE SIMPLE
 ========================= */
 function getCoords(ville){
 if(!ville) return [-12.8275,45.1662];
 
-let best=null;
-let bestScore=0;
+ville = ville.toLowerCase();
 
-for(let v of villages){
-const score = similarity(ville,v.nom);
-if(score>bestScore){
-bestScore=score;
-best=v;
-}
-}
+let best = villages.find(v =>
+v.nom.toLowerCase().includes(ville) ||
+ville.includes(v.nom.toLowerCase())
+);
 
-if(bestScore>=3) return best.coords;
-
-return [-12.8275,45.1662];
+return best ? best.coords : [-12.8275,45.1662];
 }
 
 /* =========================
@@ -172,20 +142,20 @@ setTimeout(()=>map.invalidateSize(),200);
 ========================= */
 function setType(type){
 clientType=type;
-
 basicBtn.classList.remove("vip-active");
 vipBtn.classList.remove("vip-active");
-
 if(type==="BASIC") basicBtn.classList.add("vip-active");
 else vipBtn.classList.add("vip-active");
 }
 
 /* =========================
-   ADD CLIENT
+   ADD CLIENT + AUTO ZOOM + POPUP
 ========================= */
 function addClient(){
 
 if(!nomEl.value.trim()) return;
+
+const coords = getCoords(villeEl.value.trim());
 
 const c={
 id:Date.now().toString(),
@@ -197,13 +167,29 @@ quartier:quartierEl.value.trim(),
 prix:prixEl.value.trim(),
 type:clientType,
 completed:false,
-coords:getCoords(villeEl.value.trim())
+coords:coords
 };
 
 clients.push(c);
 localStorage.setItem("clients",JSON.stringify(clients));
 
 render();
+
+/* 🎯 ZOOM + OPEN */
+setTimeout(()=>{
+map.flyTo(c.coords,15,{duration:0.8});
+
+setTimeout(()=>{
+const marker = clusterGroup.getLayers().find(m =>
+m.getLatLng().lat === c.coords[0] &&
+m.getLatLng().lng === c.coords[1]
+);
+
+if(marker) marker.openPopup();
+
+},400);
+
+},200);
 
 nomEl.value=prenomEl.value=villeEl.value=numeroEl.value=quartierEl.value=prixEl.value="";
 }
@@ -248,21 +234,13 @@ render();
 }
 
 /* =========================
-   RENDER
+   RENDER + CLICK ZOOM
 ========================= */
 function render(){
 
 clusterGroup.clearLayers();
 
-const search=(document.getElementById("searchInput")?.value||"").toLowerCase();
-
 clients.forEach(c=>{
-
-if(filter==="done" && !c.completed) return;
-if(filter==="todo" && c.completed) return;
-
-const txt=(c.nom+" "+c.prenom+" "+c.ville).toLowerCase();
-if(search && !txt.includes(search)) return;
 
 const color=c.completed?"#777":(c.type==="VIP"?"#ffd700":"#00ff88");
 
@@ -280,9 +258,13 @@ marker.bindPopup(`
 🏘 ${c.quartier||"-"}<br>
 📞 ${c.numero||"-"}<br>
 💰 ${c.prix||"0"}<br>
-⭐ ${c.type}<br>
-${c.completed?"✅ Terminé":"⏳ En cours"}
+⭐ ${c.type}
 `);
+
+marker.on("click",()=>{
+map.flyTo(c.coords,15,{duration:0.6});
+marker.openPopup();
+});
 
 clusterGroup.addLayer(marker);
 });
