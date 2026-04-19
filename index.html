@@ -29,11 +29,13 @@ body{margin:0;font-family:Arial;background:#041f17;color:white;overflow:hidden;}
 #map{flex:1;}
 .pulse{width:14px;height:14px;border-radius:50%;animation:pulse 1.5s infinite;}
 @keyframes pulse{0%{transform:scale(1);}70%{transform:scale(1.25);}100%{transform:scale(1);}}
+.leaflet-popup-content-wrapper,.leaflet-popup-tip{background:#0b2b22;color:white;}
+.leaflet-popup-content{margin:12px;}
+.leaflet-popup-content button{border:none;padding:10px 12px;border-radius:8px;cursor:pointer;min-height:42px;}
 
 .vip-blink{
   box-shadow: 0 0 12px #ffd700, 0 0 20px #ffd700;
 }
-
 </style>
 </head>
 
@@ -79,15 +81,26 @@ L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').add
 let clients = JSON.parse(localStorage.getItem("clients")) || [];
 let markers = {};
 let filter = "all";
-let clientType = "BASIC";
 
+/* ✅ FIX IMPORTANT : référence input */
+const searchInput = document.getElementById("searchInput");
+
+/* ✅ FIX boutons filtre */
 function setFilter(f,btn){
-  filter=f;
-  document.querySelectorAll("#filters button").forEach(b=>b.classList.remove("active"));
+  filter = f;
+
+  document.querySelectorAll("#filters button").forEach(b=>{
+    if(b.innerText !== "♻ Réinitialiser" && b.innerText !== "📤 Export"){
+      b.classList.remove("active");
+    }
+  });
+
   if(btn) btn.classList.add("active");
+
   render();
 }
 
+/* ICON */
 function createIcon(color,type){
 return L.divIcon({
   className:"",
@@ -96,6 +109,7 @@ return L.divIcon({
 });
 }
 
+/* ESPACEMENT */
 function offsetCoords(coords,index,total){
   const zoom = map.getZoom();
   const base = 0.0002;
@@ -110,6 +124,7 @@ function offsetCoords(coords,index,total){
   ];
 }
 
+/* ✅ FIX FILTER LOGIC */
 function render(){
 Object.values(markers).forEach(m=>map.removeLayer(m));
 markers={};
@@ -121,7 +136,7 @@ clients.forEach(c=>{
 if(filter==="done" && c.completed!==true) return;
 if(filter==="todo" && c.completed===true) return;
 
-const txt=(c.nom+" "+c.prenom+" "+c.ville).toLowerCase();
+const txt=(c.nom+" "+c.prenom+" "+c.ville+" "+(c.quartier||"")).toLowerCase();
 if(search && !txt.includes(search)) return;
 
 const color = c.completed ? "#777" : (c.type==="VIP" ? "#ffd700" : "#00ff88");
@@ -132,33 +147,11 @@ const index = same.findIndex(x=>x.id===c.id);
 const newCoords = offsetCoords(c.coords,index,same.length);
 
 const marker = L.marker(newCoords,{icon:createIcon(color,c.type)}).addTo(map);
-marker.on("click",()=>openPopupClient(c));
 markers[c.id]=marker;
 
 });
 
 document.getElementById("statsBtn").innerText="📊 Clients: "+clients.length;
-}
-
-/* ✅ ICI bouton appel ajouté */
-function openPopupClient(c){
-const html=`
-<b>${c.nom} ${c.prenom}</b><br>
-📍 ${c.ville}<br>
-🏘 ${c.quartier || "-"}<br>
-📞 ${c.numero}<br>
-
-<a href="tel:${c.numero}">
-  <button style="background:#1db954;color:white;margin-top:6px;">
-    📞 Appeler
-  </button>
-</a><br><br>
-
-💰 ${c.prix || "0"}<br>
-⭐ ${c.type}<br>
-`;
-
-markers[c.id].bindPopup(html).openPopup();
 }
 
 function addClient(){
@@ -172,7 +165,7 @@ ville:ville.value.trim(),
 numero:numero.value.trim(),
 quartier:quartier.value.trim(),
 prix:prix.value.trim(),
-type:clientType,
+type:"BASIC",
 completed:false,
 coords:[-12.8275,45.1662]
 };
