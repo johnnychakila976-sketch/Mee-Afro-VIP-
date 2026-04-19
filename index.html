@@ -35,10 +35,11 @@ body{
   border-bottom:1px solid rgba(255,255,255,0.08);
 }
 
+/* STATS */
 #statsBtn{
   position:absolute;
-  bottom:10px;
-  left:10px;
+  bottom:12px;
+  left:12px;
   background:#1db954;
   padding:8px 12px;
   border-radius:10px;
@@ -47,6 +48,7 @@ body{
   box-shadow:0 4px 12px rgba(0,0,0,0.25);
 }
 
+/* TOP BAR */
 #filters{
   position:absolute;
   top:10px;
@@ -54,9 +56,9 @@ body{
   right:10px;
   display:flex;
   gap:10px;
-  z-index:999;
   flex-wrap:wrap;
   align-items:center;
+  z-index:999;
 }
 
 #filters button{
@@ -67,12 +69,7 @@ body{
   background:#0b2b22;
   color:white;
   cursor:pointer;
-  transition:0.2s;
   font-size:15px;
-}
-
-#filters button:hover{
-  transform:translateY(-1px);
 }
 
 #filters button.active{
@@ -80,29 +77,39 @@ body{
 }
 
 #searchInput{
-  width:200px;
+  width:210px;
   min-height:44px;
   padding:10px 12px;
   border:none;
-  outline:none;
   border-radius:10px;
   background:#0b2b22;
   color:white;
+  outline:none;
 }
 
+/* FORM BUTTON déplacé à droite */
 .toggle-btn{
-  margin:10px 8px;
-  padding:12px;
-  min-height:46px;
+  position:absolute;
+  top:72px;
+  right:12px;
+  z-index:999;
+  width:auto;
+  min-width:125px;
+  min-height:42px;
+  padding:8px 12px;
+  margin:0;
   background:#1db954;
   border:none;
   color:white;
   font-weight:bold;
   border-radius:10px;
   cursor:pointer;
+  box-shadow:0 4px 12px rgba(0,0,0,0.22);
 }
 
+/* FORM */
 .form{
+  margin-top:58px;
   padding:10px;
   background:rgba(0,0,0,0.30);
   display:none;
@@ -186,6 +193,36 @@ body{
   cursor:pointer;
   min-height:42px;
 }
+
+/* MOBILE */
+@media(max-width:700px){
+
+  #filters{
+    gap:8px;
+    right:140px; /* laisse place au bouton formulaire */
+  }
+
+  #searchInput{
+    width:100%;
+    flex:1 1 100%;
+  }
+
+  #filters button{
+    flex:1 1 auto;
+    min-width:90px;
+  }
+
+  .toggle-btn{
+    top:12px;
+    right:12px;
+    min-width:115px;
+    font-size:14px;
+  }
+
+  .form{
+    margin-top:70px;
+  }
+}
 </style>
 </head>
 
@@ -228,15 +265,14 @@ body{
 </div>
 
 <script>
-
 const map = L.map('map',{
   zoomControl:true,
   preferCanvas:true
 }).setView([-12.8275,45.1662],10);
 
 L.tileLayer(
-  'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-  {updateWhenZooming:false, updateInterval:200}
+'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+{updateWhenZooming:false,updateInterval:200}
 ).addTo(map);
 
 let clients = JSON.parse(localStorage.getItem("clients")) || [];
@@ -246,192 +282,172 @@ let selectedClientId = null;
 let clientType = "BASIC";
 
 function updateStats(){
-  document.getElementById("statsBtn").innerText = "📊 Clients: " + clients.length;
+ document.getElementById("statsBtn").innerText="📊 Clients: "+clients.length;
 }
 
 function save(){
-  localStorage.setItem("clients", JSON.stringify(clients));
-  updateStats();
+ localStorage.setItem("clients",JSON.stringify(clients));
+ updateStats();
 }
 
 function toggleForm(){
-  const f = document.getElementById("form");
-  f.style.display = f.style.display === "flex" ? "none" : "flex";
+ const f=document.getElementById("form");
+ f.style.display = f.style.display==="flex" ? "none" : "flex";
+ setTimeout(()=>map.invalidateSize(),250);
 }
 
 function setType(type){
-  clientType = type;
-
-  basicBtn.classList.remove("vip-active");
-  vipBtn.classList.remove("vip-active");
-
-  if(type==="BASIC") basicBtn.classList.add("vip-active");
-  if(type==="VIP") vipBtn.classList.add("vip-active");
+ clientType=type;
+ basicBtn.classList.remove("vip-active");
+ vipBtn.classList.remove("vip-active");
+ if(type==="BASIC") basicBtn.classList.add("vip-active");
+ if(type==="VIP") vipBtn.classList.add("vip-active");
 }
 
 function createIcon(color){
-  return L.divIcon({
-    className:"",
-    html:`<div class="pulse" style="background:${color}"></div>`,
-    iconSize:[20,20]
-  });
+ return L.divIcon({
+   className:"",
+   html:`<div class="pulse" style="background:${color}"></div>`,
+   iconSize:[20,20]
+ });
 }
 
 function setFilter(f,btn){
-  filter = f;
-
-  document.querySelectorAll("#filters button").forEach(b=>{
-    b.classList.remove("active");
-  });
-
-  if(btn) btn.classList.add("active");
-
-  render();
+ filter=f;
+ document.querySelectorAll("#filters button").forEach(b=>b.classList.remove("active"));
+ if(btn) btn.classList.add("active");
+ render();
 }
 
 function clearMarkers(){
-  Object.values(markers).forEach(m=>map.removeLayer(m));
-  markers = {};
+ Object.values(markers).forEach(m=>map.removeLayer(m));
+ markers={};
 }
 
 function render(){
+ clearMarkers();
 
-  clearMarkers();
+ const search=document.getElementById("searchInput").value.trim().toLowerCase();
 
-  const search = document.getElementById("searchInput").value.trim().toLowerCase();
+ clients.forEach(c=>{
 
-  clients.forEach(c=>{
+   if(filter==="done" && !c.completed) return;
+   if(filter==="todo" && c.completed) return;
 
-    if(filter==="done" && !c.completed) return;
-    if(filter==="todo" && c.completed) return;
+   const txt=(c.nom+" "+c.prenom+" "+c.ville+" "+(c.quartier||"")).toLowerCase();
+   if(search && !txt.includes(search)) return;
 
-    const txt = (c.nom+" "+c.prenom+" "+c.ville+" "+(c.quartier||"")).toLowerCase();
+   const color = c.completed ? "#777" : (c.type==="VIP" ? "#ffd700" : "#00ff88");
 
-    if(search && !txt.includes(search)) return;
+   const m=L.marker(c.coords,{icon:createIcon(color)}).addTo(map);
 
-    const color = c.completed
-      ? "#777"
-      : (c.type==="VIP" ? "#ffd700" : "#00ff88");
+   m.on("click",()=>openPopupClient(c));
 
-    const m = L.marker(c.coords,{
-      icon:createIcon(color)
-    }).addTo(map);
+   markers[c.id]=m;
+ });
 
-    m.on("click",()=>openPopupClient(c));
-
-    markers[c.id] = m;
-
-  });
-
-  updateStats();
+ updateStats();
 }
 
 function openPopupClient(c){
+ selectedClientId=c.id;
 
-  selectedClientId = c.id;
+ const html=`
+ <b>${c.nom} ${c.prenom}</b><br>
+ 📍 ${c.ville}<br>
+ 🏘 ${c.quartier || "-"}<br>
+ 📞 ${c.numero}<br>
+ 💰 ${c.prix || "0"}<br>
+ ⭐ ${c.type}<br><br>
 
-  const html = `
-    <b>${c.nom} ${c.prenom}</b><br>
-    📍 ${c.ville}<br>
-    🏘 ${c.quartier || "-"}<br>
-    📞 ${c.numero}<br>
-    💰 ${c.prix || "0"}<br>
-    ⭐ ${c.type}<br><br>
+ ${!c.completed
+ ? `<button onclick="completeClient('${c.id}')" style="background:#1db954;color:white;">✔ Compléter</button><br><br>`
+ : `✅ Terminé<br><br>`
+ }
 
-    ${!c.completed
-      ? `<button onclick="completeClient('${c.id}')" style="background:#1db954;color:white;">✔ Compléter</button><br><br>`
-      : `✅ Terminé<br><br>`
-    }
+ <button onclick="deleteClient()" style="background:red;color:white;">🗑 Supprimer</button>
+ `;
 
-    <button onclick="deleteClient()" style="background:red;color:white;">🗑 Supprimer</button>
-  `;
-
-  markers[c.id].bindPopup(html,{maxWidth:260}).openPopup();
+ markers[c.id].bindPopup(html,{maxWidth:260}).openPopup();
 }
 
 function completeClient(id){
-
-  clients = clients.map(c=>{
-    if(c.id===id) c.completed = true;
-    return c;
-  });
-
-  save();
-  render();
+ clients=clients.map(c=>{
+   if(c.id===id) c.completed=true;
+   return c;
+ });
+ save();
+ render();
 }
 
 function deleteClient(){
-
-  clients = clients.filter(c=>c.id!==selectedClientId);
-
-  save();
-  render();
+ clients=clients.filter(c=>c.id!==selectedClientId);
+ save();
+ render();
 }
 
 function exportCSV(){
+ let csv="Nom,Prénom,Ville,Numéro,Quartier,Prix,Type,Status\n";
 
-  let csv = "Nom,Prénom,Ville,Numéro,Quartier,Prix,Type,Status\n";
+ clients.forEach(c=>{
+   csv+=`${c.nom},${c.prenom},${c.ville},${c.numero},${c.quartier},${c.prix},${c.type},${c.completed?"OK":"NON"}\n`;
+ });
 
-  clients.forEach(c=>{
-    csv += `${c.nom},${c.prenom},${c.ville},${c.numero},${c.quartier},${c.prix},${c.type},${c.completed?"OK":"NON"}\n`;
-  });
+ const blob=new Blob([csv],{type:"text/csv"});
+ const url=URL.createObjectURL(blob);
 
-  const blob = new Blob([csv],{type:"text/csv"});
-  const url = URL.createObjectURL(blob);
+ const a=document.createElement("a");
+ a.href=url;
+ a.download="clients.csv";
+ a.click();
 
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "clients.csv";
-  a.click();
-
-  URL.revokeObjectURL(url);
+ URL.revokeObjectURL(url);
 }
 
 async function getCoords(ville){
+ try{
+   const res=await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(ville+', Mayotte')}`);
+   const d=await res.json();
 
-  try{
-    const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(ville + ', Mayotte')}`);
-    const d = await res.json();
+   if(d && d[0]){
+     return [parseFloat(d[0].lat),parseFloat(d[0].lon)];
+   }
+ }catch(e){}
 
-    if(d && d[0]){
-      return [parseFloat(d[0].lat), parseFloat(d[0].lon)];
-    }
-  }catch(e){}
-
-  return [-12.8275,45.1662];
+ return [-12.8275,45.1662];
 }
 
 async function addClient(){
 
-  if(!nom.value.trim()) return;
+ if(!nom.value.trim()) return;
 
-  const c = {
-    id:Date.now().toString(),
-    nom:nom.value.trim(),
-    prenom:prenom.value.trim(),
-    ville:ville.value.trim(),
-    numero:numero.value.trim(),
-    quartier:quartier.value.trim(),
-    prix:prix.value.trim(),
-    type:clientType,
-    completed:false,
-    coords:await getCoords(ville.value.trim())
-  };
+ const c={
+   id:Date.now().toString(),
+   nom:nom.value.trim(),
+   prenom:prenom.value.trim(),
+   ville:ville.value.trim(),
+   numero:numero.value.trim(),
+   quartier:quartier.value.trim(),
+   prix:prix.value.trim(),
+   type:clientType,
+   completed:false,
+   coords:await getCoords(ville.value.trim())
+ };
 
-  clients.push(c);
+ clients.push(c);
 
-  save();
-  render();
+ save();
+ render();
 
-  map.flyTo(c.coords,13,{duration:1});
+ map.flyTo(c.coords,13,{duration:1});
 
-  document.querySelectorAll(".form input").forEach(i=>{
-    i.value="";
-  });
+ document.querySelectorAll(".form input").forEach(i=>i.value="");
 }
 
-render();
+window.addEventListener("resize",()=>map.invalidateSize());
 
+render();
 </script>
+
 </body>
   </html>
