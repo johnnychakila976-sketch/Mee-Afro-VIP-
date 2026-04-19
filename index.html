@@ -9,6 +9,10 @@
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
 <style>
+*{
+  box-sizing:border-box;
+}
+
 body{
   margin:0;
   font-family:Arial;
@@ -24,10 +28,11 @@ body{
 }
 
 .header{
-  padding:10px;
-  background:rgba(0,0,0,0.4);
+  padding:12px;
+  background:rgba(0,0,0,0.45);
   text-align:center;
   font-weight:bold;
+  border-bottom:1px solid rgba(255,255,255,0.08);
 }
 
 #statsBtn{
@@ -36,27 +41,35 @@ body{
   left:10px;
   background:#1db954;
   padding:8px 12px;
-  border-radius:8px;
+  border-radius:10px;
   font-weight:bold;
   z-index:999;
+  box-shadow:0 4px 12px rgba(0,0,0,0.25);
 }
 
 #filters{
   position:absolute;
   top:10px;
   left:10px;
+  right:10px;
   display:flex;
-  gap:5px;
+  gap:6px;
   z-index:999;
   flex-wrap:wrap;
 }
 
 #filters button{
-  padding:6px 10px;
+  padding:8px 10px;
   border:none;
-  border-radius:6px;
+  border-radius:8px;
   background:#0b2b22;
   color:white;
+  cursor:pointer;
+  transition:0.2s;
+}
+
+#filters button:hover{
+  transform:translateY(-1px);
 }
 
 #filters button.active{
@@ -65,9 +78,10 @@ body{
 
 #searchInput{
   width:180px;
-  padding:6px 10px;
+  padding:8px 10px;
   border:none;
-  border-radius:6px;
+  outline:none;
+  border-radius:8px;
   background:#0b2b22;
   color:white;
 }
@@ -79,40 +93,45 @@ body{
   border:none;
   color:white;
   font-weight:bold;
-  border-radius:8px;
+  border-radius:10px;
+  cursor:pointer;
 }
 
 .form{
   padding:10px;
-  background:rgba(0,0,0,0.3);
+  background:rgba(0,0,0,0.30);
   display:none;
   flex-wrap:wrap;
-  gap:5px;
+  gap:6px;
+  border-top:1px solid rgba(255,255,255,0.05);
+  border-bottom:1px solid rgba(255,255,255,0.05);
 }
 
 .form input{
   flex:1;
   min-width:45%;
-  padding:8px;
+  padding:10px;
   background:#0b2b22;
-  border:none;
+  border:1px solid rgba(255,255,255,0.08);
   color:white;
-  border-radius:6px;
+  border-radius:8px;
+  outline:none;
 }
 
 .form button{
   width:100%;
-  padding:10px;
+  padding:11px;
   background:#1db954;
   border:none;
   color:white;
   font-weight:bold;
-  border-radius:8px;
+  border-radius:10px;
+  cursor:pointer;
 }
 
 .vip-box{
   display:flex;
-  gap:5px;
+  gap:6px;
   width:100%;
 }
 
@@ -127,6 +146,7 @@ body{
 
 #map{
   flex:1;
+  border-top:1px solid rgba(255,255,255,0.04);
 }
 
 .pulse{
@@ -138,8 +158,25 @@ body{
 
 @keyframes pulse{
   0%{transform:scale(1);}
-  70%{transform:scale(1.3);}
+  70%{transform:scale(1.25);}
   100%{transform:scale(1);}
+}
+
+.leaflet-popup-content-wrapper,
+.leaflet-popup-tip{
+  background:#0b2b22;
+  color:white;
+}
+
+.leaflet-popup-content{
+  margin:12px;
+}
+
+.leaflet-popup-content button{
+  border:none;
+  padding:8px 10px;
+  border-radius:8px;
+  cursor:pointer;
 }
 </style>
 </head>
@@ -151,10 +188,10 @@ body{
 <div id="statsBtn">📊 Clients: 0</div>
 
 <div id="filters">
-  <input id="searchInput" placeholder="🔎 Rechercher un client..." onkeyup="render()">
-  <button onclick="setFilter('all')" class="active">Tout</button>
-  <button onclick="setFilter('done')">Complétés</button>
-  <button onclick="setFilter('todo')">Non</button>
+  <input id="searchInput" placeholder="🔎 Rechercher un client..." oninput="render()">
+  <button onclick="setFilter('all',this)" class="active">Tout</button>
+  <button onclick="setFilter('done',this)">Complétés</button>
+  <button onclick="setFilter('todo',this)">Non</button>
   <button onclick="exportCSV()">📤 Export</button>
 </div>
 
@@ -169,6 +206,7 @@ body{
   <input id="numero" placeholder="Numéro">
   <input id="adresse" placeholder="Adresse">
   <input id="quartier" placeholder="Quartier">
+  <input id="prix" placeholder="Prix">
 
   <div class="vip-box">
     <button type="button" id="basicBtn" onclick="setType('BASIC')" class="vip-active">BASIC</button>
@@ -184,9 +222,15 @@ body{
 
 <script>
 
-const map = L.map('map').setView([-12.8275,45.1662],10);
+const map = L.map('map',{
+  zoomControl:true,
+  preferCanvas:true
+}).setView([-12.8275,45.1662],10);
 
-L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
+L.tileLayer(
+  'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+  {updateWhenZooming:false, updateInterval:200}
+).addTo(map);
 
 let clients = JSON.parse(localStorage.getItem("clients")) || [];
 let markers = {};
@@ -214,8 +258,8 @@ function setType(type){
   basicBtn.classList.remove("vip-active");
   vipBtn.classList.remove("vip-active");
 
-  if(type === "BASIC") basicBtn.classList.add("vip-active");
-  if(type === "VIP") vipBtn.classList.add("vip-active");
+  if(type==="BASIC") basicBtn.classList.add("vip-active");
+  if(type==="VIP") vipBtn.classList.add("vip-active");
 }
 
 function createIcon(color){
@@ -226,36 +270,37 @@ function createIcon(color){
   });
 }
 
-function setFilter(f){
+function setFilter(f,btn){
   filter = f;
 
   document.querySelectorAll("#filters button").forEach(b=>{
     b.classList.remove("active");
   });
 
-  event.target.classList.add("active");
+  if(btn) btn.classList.add("active");
 
   render();
 }
 
+function clearMarkers(){
+  Object.values(markers).forEach(m=>map.removeLayer(m));
+  markers = {};
+}
+
 function render(){
 
-  Object.values(markers).forEach(m=>{
-    map.removeLayer(m);
-  });
+  clearMarkers();
 
-  markers = {};
-
-  const search = document.getElementById("searchInput").value.toLowerCase();
+  const search = document.getElementById("searchInput").value.trim().toLowerCase();
 
   clients.forEach(c=>{
 
     if(filter==="done" && !c.completed) return;
     if(filter==="todo" && c.completed) return;
 
-    const txt = (c.nom+" "+c.prenom+" "+c.ville).toLowerCase();
+    const txt = (c.nom+" "+c.prenom+" "+c.ville+" "+(c.quartier||"")).toLowerCase();
 
-    if(!txt.includes(search)) return;
+    if(search && !txt.includes(search)) return;
 
     const color = c.completed
       ? "#777"
@@ -284,19 +329,18 @@ function openPopupClient(c){
     🏘 ${c.quartier || "-"}<br>
     🏠 ${c.adresse}<br>
     📞 ${c.numero}<br>
+    💰 ${c.prix || "0"}<br>
     ⭐ ${c.type}<br><br>
 
     ${!c.completed
-      ? `<button onclick="completeClient('${c.id}')">✔ Compléter</button><br><br>`
+      ? `<button onclick="completeClient('${c.id}')" style="background:#1db954;color:white;">✔ Compléter</button><br><br>`
       : `✅ Terminé<br><br>`
     }
 
-    <button onclick="deleteClient()" style="background:red;color:white;">
-      🗑 Supprimer
-    </button>
+    <button onclick="deleteClient()" style="background:red;color:white;">🗑 Supprimer</button>
   `;
 
-  markers[c.id].bindPopup(html).openPopup();
+  markers[c.id].bindPopup(html,{maxWidth:260}).openPopup();
 }
 
 function completeClient(id){
@@ -320,10 +364,10 @@ function deleteClient(){
 
 function exportCSV(){
 
-  let csv = "Nom,Prénom,Ville,Numéro,Adresse,Quartier,Type,Status\n";
+  let csv = "Nom,Prénom,Ville,Numéro,Adresse,Quartier,Prix,Type,Status\n";
 
   clients.forEach(c=>{
-    csv += `${c.nom},${c.prenom},${c.ville},${c.numero},${c.adresse},${c.quartier},${c.type},${c.completed?"OK":"NON"}\n`;
+    csv += `${c.nom},${c.prenom},${c.ville},${c.numero},${c.adresse},${c.quartier},${c.prix},${c.type},${c.completed?"OK":"NON"}\n`;
   });
 
   const blob = new Blob([csv],{type:"text/csv"});
@@ -333,36 +377,40 @@ function exportCSV(){
   a.href = url;
   a.download = "clients.csv";
   a.click();
+
+  URL.revokeObjectURL(url);
 }
 
 async function getCoords(ville){
 
-  const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${ville}, Mayotte`);
-  const d = await res.json();
+  try{
+    const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(ville + ', Mayotte')}`);
+    const d = await res.json();
 
-  if(d[0]){
-    return [
-      parseFloat(d[0].lat),
-      parseFloat(d[0].lon)
-    ];
-  }
+    if(d && d[0]){
+      return [parseFloat(d[0].lat), parseFloat(d[0].lon)];
+    }
+  }catch(e){}
 
   return [-12.8275,45.1662];
 }
 
 async function addClient(){
 
+  if(!nom.value.trim()) return;
+
   const c = {
     id:Date.now().toString(),
-    nom:nom.value,
-    prenom:prenom.value,
-    ville:ville.value,
-    numero:numero.value,
-    adresse:adresse.value,
-    quartier:quartier.value,
+    nom:nom.value.trim(),
+    prenom:prenom.value.trim(),
+    ville:ville.value.trim(),
+    numero:numero.value.trim(),
+    adresse:adresse.value.trim(),
+    quartier:quartier.value.trim(),
+    prix:prix.value.trim(),
     type:clientType,
     completed:false,
-    coords:await getCoords(ville.value)
+    coords:await getCoords(ville.value.trim())
   };
 
   clients.push(c);
@@ -370,10 +418,10 @@ async function addClient(){
   save();
   render();
 
-  map.flyTo(c.coords,13);
+  map.flyTo(c.coords,13,{duration:1});
 
-  document.querySelectorAll("input").forEach(i=>{
-    if(i.id!=="searchInput") i.value="";
+  document.querySelectorAll(".form input").forEach(i=>{
+    i.value="";
   });
 }
 
