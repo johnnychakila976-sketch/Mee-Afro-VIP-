@@ -36,6 +36,17 @@ body{margin:0;font-family:Arial;background:#041f17;color:white;overflow:hidden;}
 .leaflet-popup-content-wrapper,.leaflet-popup-tip{background:#0b2b22;color:white;}
 .leaflet-popup-content{margin:12px;}
 .leaflet-popup-content button{border:none;padding:10px 12px;border-radius:8px;cursor:pointer;min-height:42px;}
+
+/* ===== AJOUT CLIGNOTEMENT VIP ===== */
+.vip-blink{
+  animation: pulse 1.5s infinite, blink 0.8s infinite;
+}
+@keyframes blink{
+  0%{opacity:1;}
+  50%{opacity:0.3;}
+  100%{opacity:1;}
+}
+
 @media(max-width:700px){
 #filters{right:140px;gap:12px;}
 #searchInput{width:100%;flex:1 1 100%;}
@@ -127,8 +138,13 @@ if(type==="BASIC") basicBtn.classList.add("vip-active");
 else vipBtn.classList.add("vip-active");
 }
 
-function createIcon(color){
-return L.divIcon({className:"",html:`<div class="pulse" style="background:${color}"></div>`,iconSize:[20,20]});
+/* ===== MODIF ICI ===== */
+function createIcon(color, type){
+return L.divIcon({
+  className:"",
+  html:`<div class="pulse ${type==='VIP' ? 'vip-blink' : ''}" style="background:${color}"></div>`,
+  iconSize:[20,20]
+});
 }
 
 function setFilter(f,btn){
@@ -143,16 +159,7 @@ Object.values(markers).forEach(m=>map.removeLayer(m));
 markers={};
 }
 
-/* ===== NOUVELLE FONCTION CERCLE ===== */
-function offsetCoords(coords, index, total){
-  const radius = 0.00015 + (total * 0.00002);
-  const angle = (index / total) * (2 * Math.PI);
-
-  return [
-    coords[0] + Math.cos(angle) * radius,
-    coords[1] + Math.sin(angle) * radius
-  ];
-}
+/* (garde ta version actuelle offsetCoords ici si tu en as une) */
 
 function render(){
 clearMarkers();
@@ -167,15 +174,8 @@ if(search && !txt.includes(search)) return;
 
 const color = c.completed ? "#777" : (c.type==="VIP" ? "#ffd700" : "#00ff88");
 
-/* ===== MODIF ICI ===== */
-const sameCoords = clients.filter(x =>
-  x.coords[0] === c.coords[0] && x.coords[1] === c.coords[1]
-);
-
-const index = sameCoords.findIndex(x => x.id === c.id);
-const newCoords = offsetCoords(c.coords, index, sameCoords.length);
-
-const marker = L.marker(newCoords,{icon:createIcon(color)}).addTo(map);
+/* garde ton système de coords actuel */
+const marker = L.marker(c.coords,{icon:createIcon(color, c.type)}).addTo(map);
 
 marker.on("click",()=>openPopupClient(c));
 markers[c.id]=marker;
@@ -294,4 +294,4 @@ window.addEventListener("resize",()=>map.invalidateSize());
 render();
 </script>
 </body>
-  </html>
+</html>
