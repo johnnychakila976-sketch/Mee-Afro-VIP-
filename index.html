@@ -13,12 +13,8 @@
 <script src="https://unpkg.com/leaflet.markercluster/dist/leaflet.markercluster.js"></script>
 
 <style>
-*{box-sizing:border-box;}
 body{margin:0;font-family:Arial;background:#041f17;color:white;overflow:hidden;}
-#app{display:flex;height:100vh;flex-direction:column;}
-.header{padding:12px;background:rgba(0,0,0,.45);text-align:center;font-weight:bold;}
-#statsBtn{position:absolute;bottom:64px;left:12px;background:#1db954;padding:8px 12px;border-radius:10px;font-weight:bold;z-index:999;}
-#map{flex:1;}
+#map{height:100vh;width:100%;}
 .pulse{width:14px;height:14px;border-radius:50%;animation:pulse 1.5s infinite;}
 @keyframes pulse{0%{transform:scale(1);}70%{transform:scale(1.25);}100%{transform:scale(1);}}
 </style>
@@ -26,27 +22,31 @@ body{margin:0;font-family:Arial;background:#041f17;color:white;overflow:hidden;}
 
 <body>
 
-<div id="app">
-<div id="statsBtn">📊 Clients</div>
-<div class="header">📍 Carte Mayotte</div>
 <div id="map"></div>
-</div>
 
 <script>
-
 const map = L.map('map').setView([-12.8275,45.1662],10);
 
 L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
 
 /* =========================
-   DATA
+   DONNÉES
 ========================= */
 let clients = JSON.parse(localStorage.getItem("clients")) || [];
-let clusterGroup = L.markerClusterGroup();
+
+/* =========================
+   CLUSTER (IMPORTANT)
+========================= */
+let clusterGroup = L.markerClusterGroup({
+spiderfyOnMaxZoom: true,   // 👈 SE DÉPLIE AU ZOOM
+showCoverageOnHover: false,
+zoomToBoundsOnClick: true
+});
+
 map.addLayer(clusterGroup);
 
 /* =========================
-   RENDER
+   MARKERS
 ========================= */
 function render(){
 
@@ -64,9 +64,7 @@ iconSize:[14,14]
 })
 });
 
-/* =========================
-   POPUP FIX COMPLET
-========================= */
+/* POPUP */
 marker.bindPopup(`
 <div style="min-width:180px">
 <b>${c.nom} ${c.prenom}</b><br>
@@ -77,13 +75,13 @@ marker.bindPopup(`
 ⭐ ${c.type}<br><br>
 
 ${!c.completed ? `
-<button onclick="completeClient('${c.id}')" 
+<button onclick="completeClient('${c.id}')"
 style="background:#1db954;color:white;border:none;padding:8px 10px;border-radius:6px;width:100%;margin-bottom:6px;">
 ✔ Valider
 </button>
 ` : "✅ Validé<br><br>"}
 
-<button onclick="deleteClient('${c.id}')" 
+<button onclick="deleteClient('${c.id}')"
 style="background:red;color:white;border:none;padding:8px 10px;border-radius:6px;width:100%;">
 🗑 Supprimer
 </button>
@@ -91,9 +89,7 @@ style="background:red;color:white;border:none;padding:8px 10px;border-radius:6px
 </div>
 `);
 
-/* =========================
-   CLICK BEHAVIOR
-========================= */
+/* CLICK */
 marker.on("click",()=>{
 map.flyTo(c.coords,15,{duration:0.6});
 marker.openPopup();
@@ -102,13 +98,12 @@ marker.openPopup();
 clusterGroup.addLayer(marker);
 });
 
-document.getElementById("statsBtn").innerText="📊 Clients: "+clients.length;
 }
 
 render();
 
 /* =========================
-   ACTIONS FIX
+   ACTIONS
 ========================= */
 function completeClient(id){
 clients = clients.map(c=>{
@@ -124,18 +119,6 @@ clients = clients.filter(c=>c.id!==id);
 localStorage.setItem("clients",JSON.stringify(clients));
 render();
 }
-
-/* =========================
-   POPUP FIX (NE PAS FERMER TROP VITE)
-========================= */
-map.on("popupopen", function(e){
-const btn = e.popup._closeButton;
-if(btn){
-btn.addEventListener("click", ev=>{
-ev.stopPropagation();
-});
-}
-});
 
 </script>
 
