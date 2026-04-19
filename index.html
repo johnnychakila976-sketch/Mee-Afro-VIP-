@@ -13,50 +13,264 @@
 <script src="https://unpkg.com/leaflet.markercluster/dist/leaflet.markercluster.js"></script>
 
 <style>
+*{box-sizing:border-box;}
 body{margin:0;font-family:Arial;background:#041f17;color:white;overflow:hidden;}
-#map{height:100vh;width:100%;}
-.pulse{width:14px;height:14px;border-radius:50%;animation:pulse 1.5s infinite;}
-@keyframes pulse{0%{transform:scale(1);}70%{transform:scale(1.25);}100%{transform:scale(1);}}
+
+#app{display:flex;height:100vh;flex-direction:column;}
+
+.header{
+padding:12px;
+background:rgba(0,0,0,.45);
+text-align:center;
+font-weight:bold;
+}
+
+#statsBtn{
+position:absolute;
+bottom:64px;
+left:12px;
+background:#1db954;
+padding:8px 12px;
+border-radius:10px;
+font-weight:bold;
+z-index:999;
+}
+
+#filters{
+position:absolute;
+top:10px;
+left:10px;
+right:10px;
+display:flex;
+gap:12px;
+flex-wrap:wrap;
+z-index:999;
+}
+
+#filters button{
+padding:10px 14px;
+border:none;
+border-radius:10px;
+background:#0b2b22;
+color:white;
+cursor:pointer;
+}
+
+#filters button.active{
+background:#1db954;
+}
+
+#searchInput{
+width:210px;
+padding:10px;
+border:none;
+border-radius:10px;
+background:#0b2b22;
+color:white;
+}
+
+.toggle-btn{
+position:absolute;
+top:72px;
+right:12px;
+z-index:999;
+padding:8px 12px;
+background:#1db954;
+border:none;
+color:white;
+font-weight:bold;
+border-radius:10px;
+cursor:pointer;
+}
+
+/* ================= FORM CORRIGÉ ================= */
+.form{
+position:absolute;
+top:160px;
+left:10px;
+right:10px;
+padding:10px;
+background:#06251c;
+display:none;
+flex-wrap:wrap;
+gap:8px;
+border-radius:12px;
+z-index:1001;
+}
+
+.form.show{
+display:flex !important;
+}
+
+.form input{
+flex:1;
+min-width:45%;
+padding:10px;
+background:#0b2b22;
+border:none;
+color:white;
+border-radius:10px;
+outline:none;
+}
+
+.form button{
+width:100%;
+padding:11px;
+background:#1db954;
+border:none;
+color:white;
+font-weight:bold;
+border-radius:10px;
+cursor:pointer;
+}
+
+#map{
+flex:1;
+}
+
+.pulse{
+width:14px;
+height:14px;
+border-radius:50%;
+animation:pulse 1.5s infinite;
+}
+
+@keyframes pulse{
+0%{transform:scale(1);}
+70%{transform:scale(1.25);}
+100%{transform:scale(1);}
+}
 </style>
 </head>
 
 <body>
 
+<div id="app">
+
+<div class="header">📍 Carte Mayotte Mobile PRO</div>
+
+<div id="statsBtn">📊 Clients</div>
+
+<div id="filters">
+<input id="searchInput" placeholder="🔎 Recherche..." oninput="render()">
+<button class="active" onclick="setFilter('all',this)">Tout</button>
+<button onclick="setFilter('done',this)">OK</button>
+<button onclick="setFilter('todo',this)">NON</button>
+<button onclick="resetAll()">♻ Reset</button>
+<button onclick="exportCSV()">📤 Export</button>
+</div>
+
+<button class="toggle-btn" onclick="toggleForm()">📋 Formulaire</button>
+
+<div class="form" id="form">
+<input id="nom" placeholder="Nom">
+<input id="prenom" placeholder="Prénom">
+<input id="ville" placeholder="Ville">
+<input id="numero" placeholder="Numéro">
+<input id="quartier" placeholder="Quartier">
+<input id="prix" placeholder="Prix">
+
+<button onclick="addClient()">Ajouter client</button>
+</div>
+
 <div id="map"></div>
 
+</div>
+
 <script>
+
+/* ================= MAP ================= */
 const map = L.map('map').setView([-12.8275,45.1662],10);
 
-L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png')
+.addTo(map);
 
-/* =========================
-   DONNÉES
-========================= */
+/* ================= DATA ================= */
 let clients = JSON.parse(localStorage.getItem("clients")) || [];
+let filter="all";
 
-/* =========================
-   CLUSTER (IMPORTANT)
-========================= */
+/* ================= CLUSTER ================= */
 let clusterGroup = L.markerClusterGroup({
-spiderfyOnMaxZoom: true,   // 👈 SE DÉPLIE AU ZOOM
-showCoverageOnHover: false,
-zoomToBoundsOnClick: true
+spiderfyOnMaxZoom:true,
+zoomToBoundsOnClick:true
 });
-
 map.addLayer(clusterGroup);
 
-/* =========================
-   MARKERS
-========================= */
+/* ================= FORM FIX ================= */
+function toggleForm(){
+const form = document.getElementById("form");
+form.classList.toggle("show");
+
+/* FIX MAP BUG */
+setTimeout(()=>{
+map.invalidateSize();
+},200);
+}
+
+/* ================= FILTER ================= */
+function setFilter(f,btn){
+filter=f;
+document.querySelectorAll("#filters button").forEach(b=>b.classList.remove("active"));
+if(btn) btn.classList.add("active");
+render();
+}
+
+/* ================= ADD CLIENT ================= */
+function addClient(){
+
+const c={
+id:Date.now().toString(),
+nom:nom.value,
+prenom:prenom.value,
+ville:ville.value,
+numero:numero.value,
+quartier:quartier.value,
+prix:prix.value,
+coords:[-12.8275,45.1662],
+completed:false,
+type:"BASIC"
+};
+
+clients.push(c);
+localStorage.setItem("clients",JSON.stringify(clients));
+
+render();
+
+map.flyTo(c.coords,15,{duration:0.8});
+
+nom.value=prenom.value=ville.value=numero.value=quartier.value=prix.value="";
+}
+
+/* ================= COMPLETE ================= */
+function completeClient(id){
+clients=clients.map(c=>{
+if(c.id===id) c.completed=true;
+return c;
+});
+localStorage.setItem("clients",JSON.stringify(clients));
+render();
+}
+
+/* ================= DELETE ================= */
+function deleteClient(id){
+clients=clients.filter(c=>c.id!==id);
+localStorage.setItem("clients",JSON.stringify(clients));
+render();
+}
+
+/* ================= RENDER ================= */
 function render(){
 
 clusterGroup.clearLayers();
 
 clients.forEach(c=>{
 
-const color = c.completed ? "#777" : (c.type==="VIP" ? "#ffd700" : "#00ff88");
+if(filter==="done" && !c.completed) return;
+if(filter==="todo" && c.completed) return;
 
-const marker = L.marker(c.coords,{
+const color=c.completed?"#777":"#00ff88";
+
+const marker=L.marker(c.coords,{
 icon:L.divIcon({
 className:"",
 html:`<div class="pulse" style="background:${color}"></div>`,
@@ -64,32 +278,22 @@ iconSize:[14,14]
 })
 });
 
-/* POPUP */
 marker.bindPopup(`
-<div style="min-width:180px">
 <b>${c.nom} ${c.prenom}</b><br>
 📍 ${c.ville}<br>
-🏘 ${c.quartier||"-"}<br>
-📞 ${c.numero||"-"}<br>
-💰 ${c.prix||"0"}<br>
-⭐ ${c.type}<br><br>
+📞 ${c.numero}<br>
+💰 ${c.prix}<br><br>
 
-${!c.completed ? `
-<button onclick="completeClient('${c.id}')"
-style="background:#1db954;color:white;border:none;padding:8px 10px;border-radius:6px;width:100%;margin-bottom:6px;">
+${!c.completed ?
+`<button onclick="completeClient('${c.id}')" style="background:#1db954;color:white;width:100%;padding:8px;border:none;margin-bottom:5px;">
 ✔ Valider
-</button>
-` : "✅ Validé<br><br>"}
+</button>`:"✔ OK<br><br>"}
 
-<button onclick="deleteClient('${c.id}')"
-style="background:red;color:white;border:none;padding:8px 10px;border-radius:6px;width:100%;">
+<button onclick="deleteClient('${c.id}')" style="background:red;color:white;width:100%;padding:8px;border:none;">
 🗑 Supprimer
 </button>
-
-</div>
 `);
 
-/* CLICK */
 marker.on("click",()=>{
 map.flyTo(c.coords,15,{duration:0.6});
 marker.openPopup();
@@ -98,26 +302,30 @@ marker.openPopup();
 clusterGroup.addLayer(marker);
 });
 
+document.getElementById("statsBtn").innerText="📊 Clients: "+clients.length;
 }
 
 render();
 
-/* =========================
-   ACTIONS
-========================= */
-function completeClient(id){
-clients = clients.map(c=>{
-if(c.id===id) c.completed=true;
-return c;
+/* ================= RESET ================= */
+function resetAll(){
+clients=[];
+localStorage.removeItem("clients");
+render();
+}
+
+/* ================= EXPORT ================= */
+function exportCSV(){
+let csv="Nom,Prénom,Ville,Numéro,Prix,Status\n";
+clients.forEach(c=>{
+csv+=`${c.nom},${c.prenom},${c.ville},${c.numero},${c.prix},${c.completed?"OK":"NON"}\n`;
 });
-localStorage.setItem("clients",JSON.stringify(clients));
-render();
-}
-
-function deleteClient(id){
-clients = clients.filter(c=>c.id!==id);
-localStorage.setItem("clients",JSON.stringify(clients));
-render();
+const blob=new Blob([csv],{type:"text/csv"});
+const url=URL.createObjectURL(blob);
+const a=document.createElement("a");
+a.href=url;
+a.download="clients.csv";
+a.click();
 }
 
 </script>
